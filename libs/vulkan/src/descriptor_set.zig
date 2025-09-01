@@ -1,0 +1,60 @@
+const u = @import("util");
+const std = @import("std");
+const types = @import("types");
+const Device = @import("main.zig").Device;
+
+pub const Descriptor_set = struct {
+    descriptor_set: types.Descriptor_set,
+    device: *Device,
+    
+    pub fn set_image(desc_set: Descriptor_set, binding: u32, element: u32, descriptor_type: types.Descriptor_type, sampler: types.Sampler, image_view: types.Image_view, image_layout: types.Image_layout) void {
+        const image_infos = [_]types.Descriptor_image_info {
+            .{
+                .sampler = sampler,
+                .imageView = image_view,
+                .imageLayout = image_layout,
+            },
+        };
+        const write_infos = [_]types.Write_descriptor_Set {
+            .{
+                .dstSet = desc_set.descriptor_set,
+                .dstBinding = binding,
+                .dstArrayElement = element,
+                .descriptorCount = 1,
+                .descriptorType = descriptor_type,
+                .pImageInfo = &image_infos,
+                .pBufferInfo = undefined,
+                .pTexelBufferView = undefined,
+            },
+        };
+        desc_set.device.call(.update_descriptor_sets, .{desc_set.device.device, write_infos.len, &write_infos, 0, undefined});
+    }
+};
+
+pub const Descriptor_pool = struct {
+    descriptor_pool: types.Descriptor_pool,
+    device: *Device,
+    
+    pub fn deinit(desc_pool: *Descriptor_pool) void {
+        desc_pool.device.call(.destroy_descriptor_pool, .{desc_pool.device.device, desc_pool.descriptor_pool, null});
+    }
+    
+    pub fn reset(desc_pool: *Descriptor_pool) !void {
+        try desc_pool.device.call(.reset_descriptor_pool, .{desc_pool.device.device, desc_pool.descriptor_pool, .empty()});
+    }
+    
+    pub fn allocate_descriptor_set(desc_pool: *Descriptor_pool, layout: types.Descriptor_set_layout) !Descriptor_set {
+        const layouts = [1]types.Descriptor_set_layout { layout };
+        const create_info = types.Descriptor_set_allocate_info {
+            .descriptorPool = desc_pool.descriptor_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &layouts,
+        };
+        var descriptor_sets: [1]types.Descriptor_set = undefined;
+        try desc_pool.device.call(.allocate_descriptor_sets, .{desc_pool.device.device, &create_info, &descriptor_sets});
+        return .{
+            .descriptor_set = descriptor_sets[0],
+            .device = desc_pool.device,
+        };
+    }
+};

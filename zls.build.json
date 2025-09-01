@@ -1,0 +1,12 @@
+{
+    "build_options": [
+        {
+            "name": "app",
+            "value": "test_app"
+        },
+        {
+            "name": "backend",
+            "value": "desktop_vulkan"
+        }
+    ]
+}

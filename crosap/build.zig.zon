@@ -1,0 +1,27 @@
+.{
+    .fingerprint = 0xa5a1757e7ff029fb,
+    .name = .crosap,
+    .version = "0.0.1",
+    .dependencies = .{
+        .util = .{
+            .path = "../util",
+        },
+        .vulkan = .{
+            .path = "../libs/vulkan",
+            .lazy = true,
+        },
+        .glfw = .{
+            .path = "../libs/glfw",
+            .lazy = true,
+        },
+    },
+    .paths = .{
+        "build.zig.zon",
+        "build.zig",
+        "crosap_api",
+        "crosap",
+        "crosap_main",
+        "backends",
+        "backend_libs",
+    },
+}
