@@ -196,9 +196,17 @@ pub fn Backend(render_type: Render_type) type {
                 @panic("Glfw reports vulkan not supported");
             }
             
-            try b.render.init();
+            switch (render_type) {
+                .vulkan => {
+                    const required_extensions = try b.glfw.required_vulkan_extensions();
+                    defer u.alloc.free(required_extensions);
+                    try b.render.init_without_surface(required_extensions);
+                },
+            }
             
             u.log_start("Create glfw window");
+            defer u.log_end({});
+            
             switch (render_type) {
                 .vulkan => {
                     try b.glfw.set_window_hint(.client_api, lib_glfw.types.window_hint_value.no_api);
@@ -216,12 +224,10 @@ pub fn Backend(render_type: Render_type) type {
             u.log("Surface");
             switch (render_type) {
                 .vulkan => {
-                    const vulkan_surface = b.window.create_vulkan_surface(b.render.instance.instance);
-                    b.render.surface = b.physical_device.import_surface(vulkan_surface);
+                    const vulkan_surface = try b.window.create_vulkan_surface(b.render.instance.instance);
+                    try b.render.set_surface(vulkan_surface);
                 },
             }
-            
-            u.log_end({});
         }
         
         pub fn deinit(b: *This) void {
@@ -261,10 +267,15 @@ pub fn Backend(render_type: Render_type) type {
         
         pub fn poll_events(b: *This) !void {
             try b.glfw.poll_events();
+            if (b.window.should_close()) {
+                b.events.add_end(.{
+                    .quit = .{},
+                });
+            }
         }
         
         pub fn get_event(b: *This) !?Event {
-            return b.events.get_start();
+            return b.events.pop_start();
         }
     };
 }

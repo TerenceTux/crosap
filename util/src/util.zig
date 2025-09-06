@@ -253,7 +253,8 @@ pub fn comptime_to_sentinel(T: type, sentinel: T, in: []const T) [:sentinel]cons
     var array: [in.len:sentinel]T = undefined;
     @memcpy(array[0..in.len], in);
     array[in.len] = sentinel;
-    return &array;
+    const array_copy = array;
+    return &array_copy;
 }
 
 pub fn Single_error_set(comptime error_name: []const u8) type {

@@ -2,11 +2,15 @@ const u = @import("util");
 const std = @import("std");
 const types = @import("types.zig");
 const Window = @import("main.zig").Window;
+const vulkan = @import("vulkan");
 
 const lib_paths = [_][]const u8 {
     "/usr/lib/libglfw.so",
     "/usr/lib/libglfw.so.3",
 };
+
+const Vulkan_instance_extension = vulkan.types.Instance_extension; 
+const instance_extension_reverse = vulkan.instance_extension_reverse;
 
 pub const Loader = struct {
     pub const Version = struct {
@@ -163,13 +167,12 @@ pub const Loader = struct {
         
         loader.version = loader.get_version();
         const version_string = loader.get_version_string();
-        u.log(.{"Glfw version ",version_string,"[",loader.version,"]"});
-        u.log(.{"Warning: GLFW is too old"});
+        u.log(.{"Glfw version ",version_string," [",loader.version,"]"});
         if (!loader.version.is_at_least(.create(3, 0, 0))) {
             u.log(.{"Error: GLFW is too old"});
             return error.glfw_too_old;
         }
-        if (!loader.version.is_at_least(.create(4, 0, 0))) {
+        if (loader.version.is_at_least(.create(4, 0, 0))) {
             u.log(.{"Warning: GLFW is too new, there is a high change things will not work"});
         }
         
@@ -195,7 +198,7 @@ pub const Loader = struct {
     }
     
     pub fn deinit(loader: *Loader) void {
-        loader.call(.glfwTerminate, .{});
+        loader.fns.glfwTerminate();
         loader.dynlib.close();
     }
     
@@ -280,15 +283,18 @@ pub const Loader = struct {
         }
     }
     
-    pub fn required_vulkan_extensions(loader: *Loader) ![]const []const u8 {
+    pub fn required_vulkan_extensions(loader: *Loader) ![]const Vulkan_instance_extension {
         var count: u32 = undefined;
-        const strings_ptr = try loader.call(.glfwGetRequiredInstanceExtensions, .{&count}).?;
+        const strings_ptr = (try loader.call(.glfwGetRequiredInstanceExtensions, .{&count})).?;
         
-        const strings = u.alloc.alloc([]const u8, count) catch @panic("No memory");
-        for (strings_ptr, strings) |c_str, *dest| {
-            dest.* = u.alloc.dupe(u8, std.mem.span(c_str)) catch @panic("No memory");
+        const extensions = u.alloc.alloc(Vulkan_instance_extension, count) catch @panic("No memory");
+        for (extensions, strings_ptr) |*extension, c_str| {
+            extension.* = instance_extension_reverse.get(std.mem.span(c_str)) orelse {
+                u.log(.{"Unknown extension: ",c_str});
+                return error.unknown_extension;
+            };
         }
-        return strings;
+        return extensions;
     }
     
     pub fn physical_device_can_present(loader: *Loader, instance: *anyopaque, device: *anyopaque, queue_family: u32) !bool {

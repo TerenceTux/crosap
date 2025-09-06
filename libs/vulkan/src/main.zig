@@ -1,6 +1,11 @@
 
 pub const types = @import("types");
 pub const Loader = @import("loader.zig").Loader;
+pub const instance_extension_map = @import("loader.zig").instance_extension_map;
+pub const instance_extension_reverse = @import("loader.zig").instance_extension_reverse;
+pub const device_extension_map = @import("loader.zig").device_extension_map;
+pub const device_extension_reverse = @import("loader.zig").device_extension_reverse;
+
 pub const Instance = @import("instance.zig").Instance;
 pub const Physical_device = @import("physical_device.zig").Physical_device;
 pub const Surface = @import("surface.zig").Surface;

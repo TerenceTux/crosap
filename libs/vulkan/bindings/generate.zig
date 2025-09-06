@@ -513,7 +513,7 @@ const file_start =
 \\        const Self = @This();
 \\        value: T = 0,
 \\        
-\\        fn empty() Self {
+\\        pub fn empty() Self {
 \\            return .{};
 \\        }
 \\        
@@ -525,33 +525,19 @@ const file_start =
 \\}
 \\
 \\pub const Command = struct {
-\\    name: []const u8,
+\\    name: [:0]const u8,
 \\    function: type,
 \\    errors: type,
-\\    
-\\    fn Single_error_set(error_name: []const u8) type {
-\\        return @Type(.{
-\\            .error_set = &.{
-\\                .{
-\\                    .name = error_name,
-\\                },
-\\            },
-\\        });
-\\    }
-\\    
-\\    fn create_error(name: []const u8) Single_error_set(name) {
-\\        return @field(Single_error_set(name), name);
-\\    }
 \\    
 \\    fn result_to_error(result: Result) anyerror!void {
 \\        switch (result) {
 \\            .success => return,
-\\            inline else => return create_error(@tagName(result)),
+\\            inline else => |error_result| return u.create_error(@tagName(error_result)),
 \\            _ => return error.unknown,
 \\        }
 \\    }
 \\    
-\\    fn Call_return_type(command: Command) type {
+\\    pub fn Call_return_type(command: Command) type {
 \\        const Return_type = @typeInfo(command.function).@"fn".return_type.?;
 \\        if (Return_type == Result) {
 \\            const error_count = @typeInfo(command.errors).error_set.?.len;
@@ -575,11 +561,16 @@ const file_start =
 \\            if (Call_return_type(command) == void) {
 \\                return;
 \\            }
-\\            return result_to_error(result);
+\\            return @errorCast(result_to_error(result));
 \\        } else {
 \\            return result;
 \\        }
 \\    }
+\\};
+\\
+\\pub const Extension = struct {
+\\    name: [:0]const u8,
+\\    commands: []const @Type(.enum_literal),
 \\};
 \\
 \\pub const null_handle: u64 = 0;
@@ -629,12 +620,17 @@ pub const Outputter = struct {
         pub fn write_commands(extension: *Extension, o: *Outputter) void {
             o.write("    pub const ");
             o.write_extension_name(extension.name);
-            o.write(" = [_]@Type(.enum_literal) {\n");
+            o.write(" = Extension {\n");
+            o.write("        .name = \"");
+            o.write(extension.name);
+            o.write("\",\n");
+            o.write("        .commands = &.{\n");
             for (extension.commands.items) |command| {
-                o.write("        .");
+                o.write("            .");
                 o.write_command_name(command);
                 o.write(",\n");
             }
+            o.write("        },\n");
             o.write("    };\n");
         }
     };
@@ -1147,6 +1143,8 @@ pub const Outputter = struct {
                             } else if (std.mem.endsWith(u8, return_type, "*")) {
                                 o.write("*");
                                 o.write_c_type_name(return_type[0 .. return_type.len - 1]);
+                            } else if (strings_equal(return_type, "PFN_vkVoidFunction")){
+                                o.write("?Void_function_fn");
                             } else {
                                 o.write_c_type_name(return_type);
                             }
@@ -1244,6 +1242,10 @@ pub const Outputter = struct {
                         o.write("next: ");
                         o.write_c_type(.field);
                         o.write(" = null,\n");
+                    } else if (strings_equal(name, "flags") and if (last.props.get("optional")) |optional_val| strings_equal(optional_val, "true") else false) {
+                        o.write("flags: ");
+                        o.write_c_type(.field);
+                        o.write(" = .empty(),\n");
                     } else {
                         var stripped = name;
                         const prefixes = [_][]const u8 {
@@ -1318,21 +1320,23 @@ pub const Outputter = struct {
                     o.check_command_type = &command.type;
                 }
             } else if (strings_equal(last.name, "param")) {
-                const command_tag = o.tag_up(2).?;
-                if (strings_equal(command_tag.name, "command") and is_valid_api(&command_tag.props)) {
-                    o.write("        ");
-                    o.write_value(o.current_name.?);
-                    o.write(": ");
-                    o.write_c_type(.argument);
-                    o.write(",\n");
-                    if (o.check_command_type) |command_type| {
-                        defer o.check_command_type = null;
-                        if (!o.current_is_pointer) {
-                            const c_type = o.current_type.?;
-                            if (strings_equal(c_type, "VkInstance") or strings_equal(c_type, "VkPhysicalDevice")) {
-                                command_type.* = .instance;
-                            } else if (strings_equal(c_type, "VkDevice") or strings_equal(c_type, "VkQueue") or strings_equal(c_type, "VkCommandBuffer") or strings_equal(c_type, "VkExternalComputeQueueNV")) {
-                                command_type.* = .device;
+                if (is_valid_api(&last.props)) {
+                    const command_tag = o.tag_up(2).?;
+                    if (strings_equal(command_tag.name, "command") and is_valid_api(&command_tag.props)) {
+                        o.write("        ");
+                        o.write_value(o.current_name.?);
+                        o.write(": ");
+                        o.write_c_type(.argument);
+                        o.write(",\n");
+                        if (o.check_command_type) |command_type| {
+                            defer o.check_command_type = null;
+                            if (!o.current_is_pointer) {
+                                const c_type = o.current_type.?;
+                                if (strings_equal(c_type, "VkInstance") or strings_equal(c_type, "VkPhysicalDevice")) {
+                                    command_type.* = .instance;
+                                } else if (strings_equal(c_type, "VkDevice") or strings_equal(c_type, "VkQueue") or strings_equal(c_type, "VkCommandBuffer") or strings_equal(c_type, "VkExternalComputeQueueNV")) {
+                                    command_type.* = .device;
+                                }
                             }
                         }
                     }
@@ -1350,7 +1354,11 @@ pub const Outputter = struct {
                         o.end_of_line();
                     } else {
                         o.write("    ) callconv(.c) ");
-                        o.write_c_type_name(o.current_return_type.?);
+                        if (strings_equal(o.current_return_type.?, "PFN_vkVoidFunction")){
+                            o.write("?Void_function_fn");
+                        } else {
+                            o.write_c_type_name(o.current_return_type.?);
+                        }
                         o.write(",\n}");
                         o.end_of_line();
                     }
@@ -1562,9 +1570,13 @@ pub const Outputter = struct {
                 }
             }
         }
-        if (std.mem.endsWith(u8, value[0..value.len - suffix_len], "_BIT")) {
-            suffix_len += 4;
+        if (std.mem.endsWith(u8, prefix, "FlagBits")) {
+            prefix = prefix[0 .. prefix.len - 8];
+            if (std.mem.endsWith(u8, value[0..value.len - suffix_len], "_BIT")) {
+                suffix_len += 4;
+            }
         }
+        
         
         var index: usize = 0;
         while (true) {
@@ -1631,12 +1643,14 @@ pub const Outputter = struct {
                 }
             }
         }
-        if (o.current_is_pointer) {
-            if (typeinfo.props.get("optional")) |optional| {
-                if (strings_equal(optional, "true") or std.mem.startsWith(u8, optional, "true,")) {
+        if (typeinfo.props.get("optional")) |optional_val| {
+            if (strings_equal(optional_val, "true") or std.mem.startsWith(u8, optional_val, "true,")) {
+                if (o.current_is_pointer or strings_equal(o.current_type.?, "VkInstance")) {
                     o.write("?");
                 }
             }
+        }
+        if (o.current_is_pointer) {
             if (multiple) {
                 if (null_terminated) {
                     o.write("[*:0]");
@@ -1855,6 +1869,20 @@ pub const Outputter = struct {
     // a3dView -> a_3d_view
     // a3dayView -> a_3_day_view
     fn write_snake_case(o: *Outputter, text: []const u8, first_upper: bool) void {
+        if (std.mem.containsAtLeastScalar(u8, text, 1, '_')) {
+            // Already is snake_case
+            var is_first = first_upper;
+            for (text) |c| {
+                if (is_first) {
+                    is_first = false;
+                    o.write_char(std.ascii.toUpper(c));
+                } else {
+                    o.write_char(std.ascii.toLower(c));
+                }
+            }
+            return;
+        }
+        
         var is_first = first_upper;
         var previous = Chartype.underscore;
         var hold: ?u8 = null; // we put uppercase on hold when it comes after uppercase

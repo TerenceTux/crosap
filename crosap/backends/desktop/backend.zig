@@ -162,7 +162,7 @@ pub const Backend = struct {
                 switch (b.textures.items.get(texture_index)) {
                     .free => {},
                     .used => |tex_info| {
-                        b.variant_call(.destroy_texture, tex_info.imp) catch {};
+                        b.variant_call(.destroy_texture, .{tex_info.imp});
                     },
                 }
                 if (texture_index == 0) {
@@ -172,11 +172,11 @@ pub const Backend = struct {
                 }
             }
         }
-        while (texture_index < b.textures.items.count()) {
-            switch (b.textures.items.get_mut(texture_index)) {
+        while (texture_index < b.textures.items.count) {
+            switch (b.textures.items.get_mut(texture_index).*) {
                 .free => {},
                 .used => |*tex_info| {
-                    tex_info.imp = b.variant_call(.create_texture, .{tex_info.size}) catch {};
+                    tex_info.imp = try b.variant_call(.create_texture, .{tex_info.size});
                     b.variant_call(.update_texture, .{tex_info.imp, .create(.zero, tex_info.size), tex_info.data}) catch {};
                 },
             }
@@ -193,7 +193,7 @@ pub const Backend = struct {
             @panic("all backends failed");
         }
         u.log(.{"Init ",b.current_variant});
-        b.variant_call(.init) catch |err| {
+        b.variant_call(.init, .{}) catch |err| {
             u.log_end(.{"Init error: ",err});
             return false;
         };
@@ -236,7 +236,9 @@ pub const Backend = struct {
                 }
             }
         } else { // function can't fail
-            return b.variant_call(function, args);
+            const ret_val = b.variant_call(function, args);
+            u.log_end(.{});
+            return ret_val;
         }
     }
     
@@ -244,7 +246,7 @@ pub const Backend = struct {
         u.log_start(.{"Deinit ",b.current_variant," for switching"});
         var texture_iterator = b.textures.iterator();
         while (texture_iterator.read()) |index| {
-            const texture_imp = b.textures.get(index).imp;
+            const texture_imp = index.imp;
             b.call(.destroy_texture, .{texture_imp});
         }
         b.variant_call(.deinit, .{});

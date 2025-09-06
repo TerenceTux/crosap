@@ -40,15 +40,15 @@ pub const Surface = struct {
             .height = 0xFFFFFFFF,
         };
         return .{
-            .min_swapchain_images = properties.minImageCount,
-            .max_swapchain_images = if (properties.maxImageCount == 0) null else properties.maxImageCount,
-            .current_size = if (std.meta.eql(properties.currentExtent, extent_unspecified)) null else properties.currentExtent,
-            .min_size = properties.minImageExtent,
-            .max_size = properties.maxImageExtent,
-            .max_array_layers = properties.maxImageArrayLayers,
-            .current_transform = properties.currentTransform,
-            .supported_transforms = properties.supportedTransforms,
-            .supported_alpha_composite_mode = properties.supportedCompositeAlpha,
+            .min_swapchain_images = properties.min_image_count,
+            .max_swapchain_images = if (properties.max_image_count == 0) null else properties.max_image_count,
+            .current_size = if (std.meta.eql(properties.current_extent, extent_unspecified)) null else properties.current_extent,
+            .min_size = properties.min_image_extent,
+            .max_size = properties.max_image_extent,
+            .max_array_layers = properties.max_image_array_layers,
+            .current_transform = properties.current_transform,
+            .supported_transforms = properties.supported_transforms,
+            .supported_alpha_composite_mode = properties.supported_composite_alpha,
         };
     }
     
@@ -83,7 +83,7 @@ pub const Surface = struct {
         for (vk_formats, list) |vk_format, *dest| {
             dest.* = .{
                 .format = vk_format.format,
-                .color_space = vk_format.colorSpace,
+                .color_space = vk_format.color_space,
             };
         }
         return list;

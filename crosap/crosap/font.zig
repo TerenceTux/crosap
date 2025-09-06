@@ -1272,3 +1272,23 @@ pub const At = Character(struct {
         
     }
 });
+
+pub const Backtick = Character(struct {
+    pub const width = .small;
+    pub const height = .big;
+    pub fn draw(d: *Character_draw) void {
+        d.draw_line(d.left(4), d.up(1), d.right(5), d.down(3));
+        
+    }
+});
+
+pub const Tilde = Character(struct {
+    pub const width = .wide;
+    pub const height = .normal;
+    pub fn draw(d: *Character_draw) void {
+//         d.draw_ellipse_part(d.left(3), d.up(3), d.right(5), d.down(5), d.left(3), d.up(3), d.right(5), d.down(4));
+//         d.draw_ellipse_part(d.left(5), d.up(3), d.right(7), d.down(5), d.left(5), d.up(4), d.right(7), d.down(5));
+        d.draw_ellipse_part(d.left(3), d.precise(3.5), d.precise(5.14), d.precise(5.5), d.left(3), d.precise(3.5), d.precise(5), d.precise(4.5));
+        d.draw_ellipse_part(d.precise(4.86), d.precise(2.5), d.right(7), d.precise(4.5), d.precise(5), d.precise(3.5), d.right(7), d.precise(4.5));
+    }
+});

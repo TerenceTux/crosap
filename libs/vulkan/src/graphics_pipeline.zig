@@ -39,7 +39,7 @@ pub const Graphics_pipeline = struct {
         var offset: usize = 0;
         for (specialization, entries) |info, *entry| {
             entry.* = .{
-                .constantID = info.id,
+                .constant_id = info.id,
                 .offset = @intCast(offset),
                 .size = info.data.len,
             };
@@ -66,16 +66,16 @@ pub const Graphics_pipeline = struct {
         var vertex_shader: types.Shader_module = undefined;
         const vertex_shader_info = types.Shader_module_create_info {
             .flags = .empty(),
-            .codeSize = create_info.vertex_code.len * 4,
-            .pCode = create_info.vertex_code.ptr,
+            .code_size = create_info.vertex_code.len * 4,
+            .code = create_info.vertex_code.ptr,
         };
-        try device.cal(.create_shader_module, .{device.device, &vertex_shader_info, null, &vertex_shader});
+        try device.call(.create_shader_module, .{device.device, &vertex_shader_info, null, &vertex_shader});
         
         var fragment_shader: types.Shader_module = undefined;
         const fragment_shader_info = types.Shader_module_create_info {
             .flags = .empty(),
-            .codeSize = create_info.fragment_code.len * 4,
-            .pCode = create_info.fragment_code.ptr,
+            .code_size = create_info.fragment_code.len * 4,
+            .code = create_info.fragment_code.ptr,
         };
         try device.call(.create_shader_module, .{device.device, &fragment_shader_info, null, &fragment_shader});
         
@@ -86,10 +86,10 @@ pub const Graphics_pipeline = struct {
             vertex_specialization_entries = create_specialization_entries(create_info.vertex_specialization);
             vertex_specialization_data = create_specialization_data(create_info.vertex_specialization);
             vertex_specialization_info = .{
-                .mapEntryCount = @intCast(vertex_specialization_entries.len),
-                .pMapEntries = vertex_specialization_entries.ptr,
-                .dataSize = vertex_specialization_data.len,
-                .pData = vertex_specialization_data.ptr,
+                .map_entry_count = @intCast(vertex_specialization_entries.len),
+                .map_entries = vertex_specialization_entries.ptr,
+                .data_size = vertex_specialization_data.len,
+                .data = vertex_specialization_data.ptr,
             };
         }
         defer if (vertex_specialization_info != null) {
@@ -103,10 +103,10 @@ pub const Graphics_pipeline = struct {
             fragment_specialization_entries = create_specialization_entries(create_info.fragment_specialization);
             fragment_specialization_data = create_specialization_data(create_info.fragment_specialization);
             fragment_specialization_info = .{
-                .mapEntryCount = @intCast(fragment_specialization_entries.len),
-                .pMapEntries = fragment_specialization_entries.ptr,
-                .dataSize = fragment_specialization_data.len,
-                .pData = fragment_specialization_data.ptr,
+                .map_entry_count = @intCast(fragment_specialization_entries.len),
+                .map_entries = fragment_specialization_entries.ptr,
+                .data_size = fragment_specialization_data.len,
+                .data = fragment_specialization_data.ptr,
             };
         }
         defer if (fragment_specialization_info != null) {
@@ -118,42 +118,42 @@ pub const Graphics_pipeline = struct {
                 .flags = .empty(),
                 .stage = .vertex,
                 .module = vertex_shader,
-                .pName = "main",
-                .pSpecializationInfo = if (vertex_specialization_info) |info| &info else null,
+                .name = "main",
+                .specialization_info = if (vertex_specialization_info) |info| &info else null,
             },
             .{
                 .flags = .empty(),
                 .stage = .fragment,
                 .module = fragment_shader,
-                .pName = "main",
-                .pSpecializationInfo = if (fragment_specialization_info) |info| &info else null,
+                .name = "main",
+                .specialization_info = if (fragment_specialization_info) |info| &info else null,
             },
         };
         
         const dynamic_states = [_]types.Dynamic_state {};
         const dynamic_state = types.Pipeline_dynamic_state_create_info {
             .flags = .empty(),
-            .dynamicStateCount = dynamic_states.len,
-            .pDynamicStates = &dynamic_states,
+            .dynamic_state_count = dynamic_states.len,
+            .dynamic_states = &dynamic_states,
         };
         
         const vertex_input_info = types.Pipeline_vertex_input_state_create_info {
             .flags = .empty(),
-            .vertexBindingDescriptionCount = @intCast(create_info.vertex_bindings.len),
-            .pVertexBindingDescriptions = create_info.vertex_bindings.ptr,
-            .vertexAttributeDescriptionCount = @intCast(create_info.vertex_attributes.len),
-            .pVertexAttributeDescriptions = create_info.vertex_attributes.ptr,
+            .vertex_binding_description_count = @intCast(create_info.vertex_bindings.len),
+            .vertex_binding_descriptions = create_info.vertex_bindings.ptr,
+            .vertex_attribute_description_count = @intCast(create_info.vertex_attributes.len),
+            .vertex_attribute_descriptions = create_info.vertex_attributes.ptr,
         };
         
         const primitive_assembly_info = types.Pipeline_input_assembly_state_create_info {
             .flags = .empty(),
             .topology = .triangle_list,
-            .primitiveRestartEnable = .false,
+            .primitive_restart_enable = .false,
         };
         
         const tessellation_info = types.Pipeline_tessellation_state_create_info {
             .flags = .empty(),
-            .patchControlPoints = 0,
+            .patch_control_points = 0,
         };
         
         const viewports = [_]types.Viewport {
@@ -162,8 +162,8 @@ pub const Graphics_pipeline = struct {
                 .y = 0,
                 .width = @floatFromInt(create_info.width),
                 .height = @floatFromInt(create_info.height),
-                .minDepth = 0,
-                .maxDepth = 1,
+                .min_depth = 0,
+                .max_depth = 1,
             },
         };
         const scissors = [_]types.Rect_2d {
@@ -174,75 +174,75 @@ pub const Graphics_pipeline = struct {
         };
         const viewport_info = types.Pipeline_viewport_state_create_info {
             .flags = .empty(),
-            .viewportCount = viewports.len,
-            .pViewports = &viewports,
-            .scissorCount = scissors.len,
-            .pScissors = &scissors,
+            .viewport_count = viewports.len,
+            .viewports = &viewports,
+            .scissor_count = scissors.len,
+            .scissors = &scissors,
         };
         
         const rasterize_info = types.Pipeline_rasterization_state_create_info {
             .flags = .empty(),
-            .depthClampEnable = .false,
-            .rasterizerDiscardEnable = .false,
-            .polygonMode = .fill,
-            .cullMode = .empty(),
-            .frontFace = .clockwise,
-            .depthBiasEnable = .false,
-            .depthBiasConstantFactor = 0,
-            .depthBiasClamp = 0,
-            .depthBiasSlopeFactor = 0,
-            .lineWidth = 1,
+            .depth_clamp_enable = .false,
+            .rasterizer_discard_enable = .false,
+            .polygon_mode = .fill,
+            .cull_mode = .empty(),
+            .front_face = .clockwise,
+            .depth_bias_enable = .false,
+            .depth_bias_constant_factor = 0,
+            .depth_bias_clamp = 0,
+            .depth_bias_slope_factor = 0,
+            .line_width = 1,
         };
         
         const multisampling_info = types.Pipeline_multisample_state_create_info {
             .flags = .empty(),
-            .rasterizationSamples = .sample_1,
-            .sampleShadingEnable = .false,
-            .minSampleShading = 1,
-            .pSampleMask = null,
-            .alphaToCoverageEnable = .false,
-            .alphaToOneEnable = .false,
+            .rasterization_samples = .@"1",
+            .sample_shading_enable = .false,
+            .min_sample_shading = 1,
+            .sample_mask = null,
+            .alpha_to_coverage_enable = .false,
+            .alpha_to_one_enable = .false,
         };
         
         const attachment_blending = switch (create_info.blend_mode) {
             .no => types.Pipeline_color_blend_attachment_state {
-                .blendEnable = .false,
-                .srcColorBlendFactor = .one,
-                .dstColorBlendFactor = .zero,
-                .colorBlendOp = .add,
-                .srcAlphaBlendFactor = .one,
-                .dstAlphaBlendFactor = .zero,
-                .alphaBlendOp = .add,
-                .colorWriteMask = .create(&.{.r, .g, .b, .a}),
+                .blend_enable = .false,
+                .src_color_blend_factor = .one,
+                .dst_color_blend_factor = .zero,
+                .color_blend_op = .add,
+                .src_alpha_blend_factor = .one,
+                .dst_alpha_blend_factor = .zero,
+                .alpha_blend_op = .add,
+                .color_write_mask = .create(&.{.r, .g, .b, .a}),
             },
             .premultiplied => types.Pipeline_color_blend_attachment_state {
-                .blendEnable = .true,
-                .srcColorBlendFactor = .one,
-                .dstColorBlendFactor = .one_minus_src_alpha,
-                .colorBlendOp = .add,
-                .srcAlphaBlendFactor = .zero,
-                .dstAlphaBlendFactor = .zero,
-                .alphaBlendOp = .add,
-                .colorWriteMask = .create(&.{.r, .g, .b}),
+                .blend_enable = .true,
+                .src_color_blend_factor = .one,
+                .dst_color_blend_factor = .one_minus_src_alpha,
+                .color_blend_op = .add,
+                .src_alpha_blend_factor = .zero,
+                .dst_alpha_blend_factor = .zero,
+                .alpha_blend_op = .add,
+                .color_write_mask = .create(&.{.r, .g, .b}),
             },
         };
         const color_blending_info = types.Pipeline_color_blend_state_create_info {
             .flags = .empty(),
-            .logicOpEnable = .false,
-            .logicOp = .copy,
-            .attachmentCount = 1,
-            .pAttachments = &.{attachment_blending},
-            .blendConstants = .{0, 0, 0, 0},
+            .logic_op_enable = .false,
+            .logic_op = .copy,
+            .attachment_count = 1,
+            .attachments = &.{attachment_blending},
+            .blend_constants = .{0, 0, 0, 0},
         };
         
         var layout: types.Pipeline_layout = undefined;
         const push_constant_ranges = [_]types.Push_constant_range {};
         const layout_info = types.Pipeline_layout_create_info {
             .flags = .empty(),
-            .setLayoutCount = @intCast(create_info.descriptor_set_layouts.len),
-            .pSetLayouts = create_info.descriptor_set_layouts.ptr,
-            .pushConstantRangeCount = push_constant_ranges.len,
-            .pPushConstantRanges = &push_constant_ranges,
+            .set_layout_count = @intCast(create_info.descriptor_set_layouts.len),
+            .set_layouts = create_info.descriptor_set_layouts.ptr,
+            .push_constant_range_count = push_constant_ranges.len,
+            .push_constant_ranges = &push_constant_ranges,
         };
         try device.call(.create_pipeline_layout, .{device.device, &layout_info, null, &layout});
         
@@ -251,13 +251,13 @@ pub const Graphics_pipeline = struct {
             .{
                 .flags = .empty(),
                 .format = create_info.image_format,
-                .samples = .sample_1,
-                .loadOp = if (create_info.keep_previous) .load else .clear,
-                .storeOp = .store,
-                .stencilLoadOp = .dont_care,
-                .stencilStoreOp = .dont_care,
-                .initialLayout = if (create_info.keep_previous) .present_src else .undefined,
-                .finalLayout = .present_src,
+                .samples = .@"1",
+                .load_op = if (create_info.keep_previous) .load else .clear,
+                .store_op = .store,
+                .stencil_load_op = .dont_care,
+                .stencil_store_op = .dont_care,
+                .initial_layout = if (create_info.keep_previous) .present_src else .undefined,
+                .final_layout = .present_src,
             }
         };
         const color_attachments = [_]types.Attachment_reference {
@@ -271,48 +271,48 @@ pub const Graphics_pipeline = struct {
         const subpasses = [_]types.Subpass_description {
             .{
                 .flags = .empty(),
-                .pipelineBindPoint = .graphics,
-                .inputAttachmentCount = input_attachments.len,
-                .pInputAttachments = &input_attachments,
-                .colorAttachmentCount = color_attachments.len,
-                .pColorAttachments = &color_attachments,
-                .pResolveAttachments = null,
-                .pDepthStencilAttachment = null,
-                .preserveAttachmentCount = preserve_attachments.len,
-                .pPreserveAttachments = &preserve_attachments,
+                .pipeline_bind_point = .graphics,
+                .input_attachment_count = input_attachments.len,
+                .input_attachments = &input_attachments,
+                .color_attachment_count = color_attachments.len,
+                .color_attachments = &color_attachments,
+                .resolve_attachments = null,
+                .depth_stencil_attachment = null,
+                .preserve_attachment_count = preserve_attachments.len,
+                .preserve_attachments = &preserve_attachments,
             }
         };
         const subpass_dependencies = [_]types.Subpass_dependency {};
         const render_pass_info = types.Render_pass_create_info {
             .flags = .empty(),
-            .attachmentCount = attachments.len,
-            .pAttachments = &attachments,
-            .subpassCount = subpasses.len,
-            .pSubpasses = &subpasses,
-            .dependencyCount = subpass_dependencies.len,
-            .pDependencies = &subpass_dependencies,
+            .attachment_count = attachments.len,
+            .attachments = &attachments,
+            .subpass_count = subpasses.len,
+            .subpasses = &subpasses,
+            .dependency_count = subpass_dependencies.len,
+            .dependencies = &subpass_dependencies,
         };
         try device.call(.create_render_pass, .{device.device, &render_pass_info, null, &render_pass});
         
         var pipeline: types.Pipeline = undefined;
         const pipeline_create_info = types.Graphics_pipeline_create_info {
             .flags = .empty(),
-            .stageCount = shader_stages.len,
-            .pStages = &shader_stages,
-            .pVertexInputState = &vertex_input_info,
-            .pInputAssemblyState = &primitive_assembly_info,
-            .pTessellationState = &tessellation_info,
-            .pViewportState = &viewport_info,
-            .pRasterizationState = &rasterize_info,
-            .pMultisampleState = &multisampling_info,
-            .pDepthStencilState = null,
-            .pColorBlendState = &color_blending_info,
-            .pDynamicState = &dynamic_state,
+            .stage_count = shader_stages.len,
+            .stages = &shader_stages,
+            .vertex_input_state = &vertex_input_info,
+            .input_assembly_state = &primitive_assembly_info,
+            .tessellation_state = &tessellation_info,
+            .viewport_state = &viewport_info,
+            .rasterization_state = &rasterize_info,
+            .multisample_state = &multisampling_info,
+            .depth_stencil_state = null,
+            .color_blend_state = &color_blending_info,
+            .dynamic_state = &dynamic_state,
             .layout = layout,
-            .renderPass = render_pass,
+            .render_pass = render_pass,
             .subpass = 0,
-            .basePipelineHandle = undefined,
-            .basePipelineIndex = undefined,
+            .base_pipeline_handle = undefined,
+            .base_pipeline_index = undefined,
         };
         try device.call(.create_graphics_pipelines, .{device.device, types.null_handle, 1, @ptrCast(&pipeline_create_info), null, @ptrCast(&pipeline)});
         

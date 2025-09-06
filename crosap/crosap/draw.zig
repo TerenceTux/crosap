@@ -298,6 +298,12 @@ pub const General_map = Create_imagemap(struct {
         .nfont_at = struct {
             pub const image = font.At.create(font_width);
         },
+        .nfont_backtick = struct {
+            pub const image = font.Backtick.create(font_width);
+        },
+        .nfont_tilde = struct {
+            pub const image = font.Tilde.create(font_width);
+        },
     };
 });
 

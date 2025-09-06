@@ -19,7 +19,7 @@ pub const Buffer = struct {
         buffer.device.call(.free_memory, .{buffer.device.device, buffer.memory, null});
     }
     
-    pub fn flush_region(buffer: *Buffer, offset: usize, size: usize) void {
+    pub fn flush_region(buffer: *Buffer, offset: usize, size: usize) !void {
         if (!buffer.coherent) {
             const ranges = [_]types.Mapped_memory_range {
                 .{

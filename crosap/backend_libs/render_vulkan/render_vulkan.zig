@@ -44,11 +44,18 @@ const textures_per_rendering = 8; // must match the shader
 
 const max_swapchain_size = 32;
 
+// There are 4 states:
+// no surface (on android when app not active): only everything until surface_available is valid, and surface_available = false
+// empty surface (possible when minimized): only everything until render_size is valid, and render_size = {0, 0}
+// not drawing: only everything until pipeline_keep is valid
+// drawing: everything is valid, this is between new_frame and end_frame
 pub const Render = struct {
     loader: lib_vulkan.Loader,
     instance: lib_vulkan.Instance,
-    physical_device: lib_vulkan.Physical_device,
+    surface_available: bool,
     
+    surface: lib_vulkan.Surface,
+    physical_device: lib_vulkan.Physical_device,
     device: lib_vulkan.Device,
     wait_fence: lib_vulkan.Fence,
     task_allocator: lib_vulkan.Task_allocator,
@@ -58,10 +65,8 @@ pub const Render = struct {
     descriptor_set_layout: lib_vulkan.types.Descriptor_set_layout,
     descriptor_pool: lib_vulkan.Descriptor_pool,
     dummy_image: *Texture,
-    
-    surface_available: bool,
-    surface: lib_vulkan.Surface,
     render_size: lib_vulkan.types.Extent_2d, // size of the swapchain. 0 if there is no swapchain
+    
     swapchain_min_image_count: u32,
     swapchain_image_format: lib_vulkan.types.Format,
     swapchain_image_colorspace: lib_vulkan.types.Khr_color_space,
@@ -75,57 +80,148 @@ pub const Render = struct {
     
     draw_frame: Draw_frame, // only valid between new_frame and end_frame
     
-    pub fn init(r: *Render, required_extensions: []const lib_vulkan.types.Instance_extension) !void {
-        r.loader.init();
-        r.init_instance(required_extensions);
-        r.init_physical_device();
-        r.init_device();
-        r.wait_fence = r.device.create_fence(false);
-        r.task_allocator = r.device.create_task_allocator(true, true);
-        r.temp_task = r.task_allocator.create_task();
-        r.staging_buffer = r.device.create_buffer(staging_buffer_size, .just(.transfer_src), .staging);
-        r.index_buffer = r.device.create_buffer(@sizeOf(@TypeOf(index_data)), .create(&.{.index_buffer, .transfer_dst}), .infrequent_write);
-        r.write_whole_buffer(&r.index_buffer, std.mem.sliceAsBytes(&index_data));
+    pub fn init_without_surface(r: *Render, required_instance_extensions: []const lib_vulkan.types.Instance_extension) !void {
+        try r.loader.init();
+        errdefer r.loader.deinit();
+        try r.init_instance(required_instance_extensions);
+        errdefer r.instance.deinit();
+        r.surface_available = false;
+    }
+    
+    pub fn set_surface(r: *Render, surface: lib_vulkan.types.Khr_surface) !void {
+        u.log_start(.{"Setting the surface"});
+        defer u.log_end(.{});
+        
+        if (r.surface_available) {
+            u.log(.{"We already have a surface"});
+            const best_physical_device, const queue_index = try r.find_best_device_and_queue(surface);
+            if (r.physical_device.physical_device == best_physical_device.physical_device and r.device.queue_index == queue_index) {
+                u.log(.{"We can reuse the device"});
+                r.surface.deinit();
+                r.surface = .{
+                    .surface = surface,
+                    .physical_device = &r.physical_device,
+                };
+                return;
+            }
+            u.log(.{"We have to recreate the device"});
+            r.deinit_device();
+        }
+        
+        try r.init_device_and_surface(surface);
+        errdefer r.surface_available = false;
+        errdefer r.device.deinit();
+        
+        r.wait_fence = try r.device.create_fence(false);
+        errdefer r.device.destroy_fence(r.wait_fence);
+        r.task_allocator = try r.device.create_task_allocator(true, true);
+        errdefer r.task_allocator.deinit();
+        r.temp_task = try r.task_allocator.create_task();
+        errdefer r.temp_task.deinit();
+        
+        r.staging_buffer = try r.device.create_buffer(staging_buffer_size, .just(.transfer_src), .staging);
+        errdefer r.staging_buffer.deinit();
+        r.index_buffer = try r.device.create_buffer(@sizeOf(@TypeOf(index_data)), .create(&.{.index_buffer, .transfer_dst}), .infrequent_write);
+        errdefer r.index_buffer.deinit();
+        try r.write_whole_buffer(&r.index_buffer, std.mem.sliceAsBytes(&index_data));
         u.assert(r.staging_buffer.mapped != null);
-        r.init_descriptor_info();
+        
+        try r.init_descriptor_info();
+        errdefer {
+            r.descriptor_pool.deinit();
+            r.device.destroy_descriptor_set_layout(r.descriptor_set_layout);
+        }
         r.dummy_image = try r.create_texture(.create(.create(1), .create(1)));
+        errdefer r.destroy_texture(r.dummy_image);
         r.render_size = .{
             .width = 0,
             .height = 0,
         };
-        r.draw_active = false;
+    }
+    
+    pub fn deinit_device(r: *Render) void {
+        u.log_start(.{"Destroying the device objects and the surface"});
+        defer u.log_end(.{});
+        
+        if (r.rendering_active()) {
+            r.rendering_disable();
+        }
+        
+        r.destroy_texture(r.dummy_image);
+        r.descriptor_pool.deinit();
+        r.device.destroy_descriptor_set_layout(r.descriptor_set_layout);
+        r.index_buffer.deinit();
+        r.staging_buffer.deinit();
+        r.temp_task.deinit();
+        r.task_allocator.deinit();
+        r.device.destroy_fence(r.wait_fence);
+        r.device.deinit();
+        r.surface.deinit();
+        
+        r.surface_available = false;
+    }
+    
+    pub fn deinit(r: *Render) void {
+        u.log_start(.{"Deinit vulkan render"});
+        defer u.log_end(.{});
+        
+        if (r.rendering_active()) {
+            r.rendering_disable();
+        }
+        if (r.surface_available) {
+            r.deinit_device();
+        }
+        
+        r.instance.deinit();
+        r.loader.deinit();
     }
     
     pub fn rendering_active(r: *Render) bool {
-        return r.render_size.width > 0 and r.render_size.height > 0;
+        return r.surface_available and r.render_size.width > 0 and r.render_size.height > 0;
     }
     
-    pub fn rendering_enable(r: *Render, size: u.Vec2i) void {
-        u.log_start(.{"Enabling rendering with size ", size});
+    pub fn rendering_enable(r: *Render, size: u.Vec2i) !void {
+        u.log_start(.{"Enabling rendering with size ",size});
         defer u.log_end({});
         
-        u.assert(!r.rendering_active);
+        u.assert(!r.rendering_active());
         r.render_size = .{
             .width = size.x.to(u32),
             .height = size.y.to(u32),
         };
-        r.init_swapchain();
-        r.init_pipeline();
-        r.init_swapchain_images();
+        errdefer r.render_size = .{
+            .width = 0,
+            .height = 0,
+        };
+        try r.init_swapchain();
+        errdefer r.swapchain.deinit();
+        try r.init_pipeline();
+        errdefer {
+            r.descriptor_pool.reset() catch {};
+            r.pipeline.deinit();
+            r.pipeline_keep.deinit();
+        }
+        try r.init_swapchain_images();
+        errdefer {
+            for (r.swapimages) |*swapimage| {
+                swapimage.deinit();
+            }
+            u.alloc.free(r.swapimages);
+        }
     }
     
     pub fn rendering_disable(r: *Render) void {
-        u.log_start("Disabling rendering");
-        defer u.log_end({});
-        u.assert(r.rendering_active);
+        u.log_start(.{"Disabling rendering"});
+        defer u.log_end(.{});
+        u.assert(r.rendering_active());
         
-        u.log("Wait for all drawing commands");
-        r.device.wait_everything_finished();
-        u.log("Pipeline");
-        r.descriptor_pool.reset();
+        u.log(.{"Wait for all drawing commands"});
+        r.device.wait_everything_finished() catch {};
+        u.log(.{"Pipeline"});
+        r.descriptor_pool.reset() catch {};
         r.pipeline.deinit();
         r.pipeline_keep.deinit();
-        u.log("Swapchain");
+        u.log(.{"Swapchain"});
         for (r.swapimages) |*swapimage| {
             swapimage.deinit();
         }
@@ -137,7 +233,10 @@ pub const Render = struct {
         };
     }
     
-    fn init_instance(r: *Render, required_extensions: []const lib_vulkan.types.Instance_extension) void {
+    fn init_instance(r: *Render, required_extensions: []const lib_vulkan.types.Instance_extension) !void {
+        u.log_start(.{"Init instance"});
+        defer u.log_end(.{});
+        
         u.log_start("Required vulkan extensions:");
         for (required_extensions) |extension| {
             u.log(extension);
@@ -152,15 +251,15 @@ pub const Render = struct {
             u.log(.{"Vulkan version: ",version});
             
             u.log_start("Instance extensions:");
-            var extensions = r.loader.get_extensions(null);
-            for (extensions.items) |extension| {
-                u.log(.{extension.name," (version ",extension.version,")"});
+            const extensions = try r.loader.get_extensions(null);
+            for (extensions) |extension| {
+                u.log(.{@tagName(extension.extension)," (version ",extension.version,")"});
             }
-            extensions.deinit();
+            defer u.alloc.free(extensions);
             u.log_end({});
             
             u.log_start("Available layers:");
-            var layers = r.loader.get_layers();
+            var layers = try r.loader.get_layers();
             for (layers.items) |layer| {
                 var this_is_the_validation_layer = false;
                 if (std.mem.eql(u8, layer.name, validation_layer_name)) {
@@ -170,14 +269,14 @@ pub const Render = struct {
                 u.log(.{layer.name," (version ",layer.layer_version,"): ",layer.description," - for vulkan ",layer.vulkan_version});
                 
                 u.log_start("This layer provides the following extensions:");
-                var layer_extensions = r.loader.get_extensions(layer.name);
-                for (layer_extensions.items) |extension| {
-                    u.log(.{extension.name," (version ",extension.version,")"});
-                    if (this_is_the_validation_layer and std.mem.eql(u8, extension.name, "VK_EXT_layer_settings")) {
+                const layer_extensions = try r.loader.get_extensions(layer.name);
+                for (layer_extensions) |extension| {
+                    u.log(.{@tagName(extension.extension)," (version ",extension.version,")"});
+                    if (this_is_the_validation_layer and extension.extension == .ext_layer_settings) {
                         validation_layer_settings_available = true;
                     }
                 }
-                layer_extensions.deinit();
+                defer u.alloc.free(layer_extensions);
                 u.log_end({});
             }
             layers.deinit();
@@ -194,11 +293,11 @@ pub const Render = struct {
             u.log("Vulkan validation layer is not available");
         }
         
-        var validation_extensions: [][]const u8 = undefined;
+        var validation_extensions: []lib_vulkan.types.Instance_extension = undefined;
         if (validation_layer_settings_available) {
-            validation_extensions = u.alloc.alloc([]const u8, required_extensions.len + 1) catch @panic("no memory");
+            validation_extensions = u.alloc.alloc(lib_vulkan.types.Instance_extension, required_extensions.len + 1) catch @panic("no memory");
             @memcpy(validation_extensions[0..required_extensions.len], required_extensions);
-            validation_extensions[required_extensions.len] = "VK_EXT_layer_settings";
+            validation_extensions[required_extensions.len] = .ext_layer_settings;
         }
         defer if (validation_layer_settings_available) {
             u.alloc.free(validation_extensions);
@@ -212,13 +311,13 @@ pub const Render = struct {
                     .boolean = true,
                 },
             },
-            //             .{
-            //                 .layer = validation_layer_name,
-            //                 .setting = "gpuav_enable",
-            //                 .value = .{
-            //                     .boolean = true,
-            //                 },
-            //             },
+//             .{
+//                 .layer = validation_layer_name,
+//                 .setting = "gpuav_enable",
+//                 .value = .{
+//                     .boolean = true,
+//                 },
+//             },
             .{
                 .layer = validation_layer_name,
                 .setting = "validate_best_practices",
@@ -265,94 +364,34 @@ pub const Render = struct {
         const layer_settings = if (validation_layer_settings_available) &validation_layer_settings else &.{};
         const using_layers: []const []const u8 = if (validation_layer_available) &.{validation_layer_name} else &.{};
         const using_extensions = if (validation_layer_settings_available) validation_extensions else required_extensions;
-        r.instance = r.loader.create_instance(null, .{
+        r.instance = try r.loader.create_instance(null, .{
             .name = "crosap",
             .version = 0,
-        }, using_layers, using_extensions, layer_settings) catch @panic("Can't create instance");
+        }, using_layers, using_extensions, layer_settings);
     }
     
-    fn init_physical_device(r: *Render) void {
-        u.log_start("Physical devices:");
-        const physical_devices = r.instance.get_physical_devices();
-        defer u.alloc.free(physical_devices);
-        for (physical_devices) |*physical_device| {
-            var properties = physical_device.get_properties();
-            u.log_start(properties.name);
-            
-            u.log(.{"Vulkan version ",properties.vulkan_version});
-            switch (properties.device_type) {
-                .integrated_gpu => u.log("This is an integrated gpu"),
-                .discrete_gpu => u.log("This is a discrete gpu"),
-                .virtual_gpu => u.log("This is a virtual gpu"),
-                .cpu => u.log("This is cpu emulated"),
-                .other => u.log("GPU type unknown"),
-            }
-            u.log(.{"Vendor id: ",properties.vendor_id});
-            u.log(.{"Device id: ",properties.device_id});
-            u.log(.{"Driver version: ",properties.driver_version});
-            
-            u.log_start("Device extensions:");
-            var extensions = physical_device.get_extensions(null);
-            for (extensions.items) |extension| {
-                u.log(.{extension.name," (version ",extension.version,")"});
-            }
-            extensions.deinit();
-            u.log_end({});
-            
-            u.log_start("Queue types:");
-            const queue_types = physical_device.get_queue_types();
-            for (queue_types) |queue_type| {
-                u.log_start(.{"Index ",queue_type.index});
-                u.log(.{"Count: ",queue_type.count});
-                if (queue_type.support_graphics) u.log("This queue supports graphics commands");
-                if (queue_type.support_compute) u.log("This queue supports compute commands");
-                if (queue_type.support_transfer) u.log("This queue supports transfer commands");
-                u.log_end({});
-            }
-            u.alloc.free(queue_types);
-            u.log_end({});
-            
-            const memory_info = physical_device.get_memory_info();
-            u.log_start("Memory heaps:");
-            for (memory_info.memoryHeaps[0..memory_info.memoryHeapCount], 0..) |heap, i| {
-                u.log(.{i,": ",heap.size," bytes (located on ",if (heap.flags.has(.device_local)) "device" else "host",")"});
-            }
-            u.log_end({});
-            u.log_start("Memory types:");
-            for (memory_info.memoryTypes[0..memory_info.memoryTypeCount], 0..) |memtype, i| {
-                u.log_start(.{i,": on heap ",memtype.heapIndex});
-                const flags = memtype.propertyFlags;
-                if (flags.has(.device_local)) {
-                    u.log("This memory is fast for the GPU");
-                } else {
-                    u.log("This memory is on the host, so not fast for the GPU");
-                }
-                if (flags.has(.host_visible)) {
-                    u.log("This memory is accessable/mappable by the host");
-                }
-                if (flags.has(.host_coherent)) {
-                    u.log("This memory is directly connected, so flushing/invalidating is not needed");
-                }
-                if (flags.has(.host_cached)) {
-                    u.log("This is cached by the host, so fast to read");
-                }
-                if (flags.has(.lazily_allocated)) {
-                    u.log("This memory could be lazily allocated and can't be accesed by the host");
-                }
-                u.log_end({});
-            }
-            u.log_end({});
-            
-            u.log_end({});
-            properties.deinit();
-        }
-        u.log_end({});
+    fn init_device_and_surface(r: *Render, surface: lib_vulkan.types.Khr_surface) !void {
+        const best_physical_device, const queue_index = try r.find_best_device_and_queue(surface);
+        r.physical_device = best_physical_device;
         
-        const best_physical_device = r.pick_physical_device(physical_devices, &.{}) orelse @panic("No suitable physical devices");
-        r.physical_device = best_physical_device.*;
+        const device_extensions = [_]lib_vulkan.types.Device_extension {
+            .khr_swapchain,
+        };
+        r.device = try r.physical_device.create_device_with_queue_index(queue_index, &device_extensions);
+        
+        r.surface = .{
+            .surface = surface,
+            .physical_device = &r.physical_device,
+        };
+        r.surface_available = true;
     }
     
-    fn pick_physical_device(r: *Render, physical_devices: []lib_vulkan.Physical_device, preferred: []const u16) ?*lib_vulkan.Physical_device {
+    fn find_best_device_and_queue(r: *Render, surface: lib_vulkan.types.Khr_surface) !struct {lib_vulkan.Physical_device, u32} {
+        var best_physical_device: ?lib_vulkan.Physical_device = null;
+        var best_device_type: lib_vulkan.types.Physical_device_type = undefined;
+        var best_extension_count: usize = undefined;
+        var queue_index: u32 = undefined;
+        
         const type_order = [_]lib_vulkan.types.Physical_device_type {
             .integrated_gpu,
             .discrete_gpu,
@@ -361,69 +400,172 @@ pub const Render = struct {
             .cpu,
         };
         
-        for (preferred) |index| {
-            if (index >= physical_devices.len) continue;
+        {
+            const physical_devices = try r.instance.get_physical_devices();
+            defer u.alloc.free(physical_devices);
+            u.log_start(.{"Physical devices:"});
+            defer u.log_end(.{});
             
-            const physical_device = &physical_devices[index];
-            if (r.physical_device_is_usable(physical_device)) {
-                return physical_device;
-            }
-        }
-        
-        for (type_order) |gpu_type| {
             for (physical_devices) |*physical_device| {
                 var properties = physical_device.get_properties();
                 defer properties.deinit();
-                if (properties.device_type != gpu_type) continue;
+                u.log_start(.{properties.name});
+                defer u.log_end(.{});
                 
-                if (r.physical_device_is_usable(physical_device)) {
-                    return physical_device;
+                u.log(.{"Vulkan version ",properties.vulkan_version});
+                switch (properties.device_type) {
+                    .integrated_gpu => u.log(.{"This is an integrated gpu"}),
+                    .discrete_gpu => u.log(.{"This is a discrete gpu"}),
+                    .virtual_gpu => u.log(.{"This is a virtual gpu"}),
+                    .cpu => u.log(.{"This is cpu emulated"}),
+                    .other, _ => u.log(.{"GPU type unknown"}),
+                }
+                u.log(.{"Vendor id: ",properties.vendor_id});
+                u.log(.{"Device id: ",properties.device_id});
+                u.log(.{"Driver version: ",properties.driver_version});
+                
+                u.log_start(.{"Device extensions:"});
+                const extensions = try physical_device.get_extensions(null);
+                defer u.alloc.free(extensions);
+                for (extensions) |extension| {
+                    u.log(.{@tagName(extension.extension)," (version ",extension.version,")"});
+                }
+                u.log_end(.{});
+                
+                u.log_start("Queue types:");
+                const queue_types = physical_device.get_queue_types();
+                defer u.alloc.free(queue_types);
+                for (queue_types) |queue_type| {
+                    u.log_start(.{"Index ",queue_type.index});
+                    u.log(.{"Count: ",queue_type.count});
+                    if (queue_type.support_graphics) u.log(.{"This queue supports graphics commands"});
+                    if (queue_type.support_compute) u.log(.{"This queue supports compute commands"});
+                    if (queue_type.support_transfer) u.log(.{"This queue supports transfer commands"});
+                    u.log_end(.{});
+                }
+                u.log_end(.{});
+                
+                const memory_info = physical_device.get_memory_info();
+                u.log_start(.{"Memory heaps:"});
+                for (memory_info.memory_heaps[0..memory_info.memory_heap_count], 0..) |heap, i| {
+                    u.log(.{i,": ",heap.size," bytes (located on ",if (heap.flags.has(.device_local)) "device" else "host",")"});
+                }
+                u.log_end(.{});
+                u.log_start(.{"Memory types:"});
+                for (memory_info.memory_types[0..memory_info.memory_type_count], 0..) |memtype, i| {
+                    u.log_start(.{i,": on heap ",memtype.heap_index});
+                    const flags = memtype.property_flags;
+                    if (flags.has(.device_local)) {
+                        u.log(.{"This memory is fast for the GPU"});
+                    } else {
+                        u.log(.{"This memory is on the host, so not fast for the GPU"});
+                    }
+                    if (flags.has(.host_visible)) {
+                        u.log(.{"This memory is accessable/mappable by the host"});
+                    }
+                    if (flags.has(.host_coherent)) {
+                        u.log(.{"This memory is directly connected, so flushing/invalidating is not needed"});
+                    }
+                    if (flags.has(.host_cached)) {
+                        u.log(.{"This is cached by the host, so fast to read"});
+                    }
+                    if (flags.has(.lazily_allocated)) {
+                        u.log(.{"This memory could be lazily allocated and can't be accesed by the host"});
+                    }
+                    u.log_end(.{});
+                }
+                u.log_end(.{});
+                
+                var device_is_better = false;
+                if (best_physical_device == null) {
+                    device_is_better = true;
+                } else {
+                    switch (compare_order(lib_vulkan.types.Physical_device_type, &type_order, best_device_type, properties.device_type)) {
+                        .better => {
+                            device_is_better = true;
+                        },
+                        .equal => {
+                            if (extensions.len > best_extension_count) {
+                                device_is_better = true;
+                            }
+                        },
+                        .worse => {},
+                    }
+                }
+                if (!device_is_better) {
+                    continue;
+                }
+                u.log(.{"The device itself is better"});
+                
+                for (queue_types) |queue_type| {
+                    const index = queue_type.index;
+                    if (!queue_type.support_graphics) {
+                        continue;
+                    }
+                    if (!try physical_device.supports_surface_on_queue(surface, index)) {
+                        continue;
+                    }
+                    u.log(.{"Queue ",index," can present to the surface"});
+                    
+                    u.log(.{"This is now the best"});
+                    best_physical_device = physical_device.*;
+                    best_device_type = properties.device_type;
+                    best_extension_count = extensions.len;
+                    queue_index = index;
                 }
             }
         }
         
-        return null;
-    }
-    
-    fn physical_device_is_usable(r: *Render, physical_device: *lib_vulkan.Physical_device) bool {
-        const queue_type_index = physical_device.best_queue_type_index() orelse return false;
-        if (!r.glfw.physical_device_can_present(r.instance.instance, physical_device.physical_device, queue_type_index)) {
-            return false;
+        if (best_physical_device) |best| {
+            return .{best, queue_index};
+        } else {
+            return error.no_valid_physical_device;
         }
-        
-        return true;
     }
     
-    fn init_device(r: *Render) void {
-        u.log("Creating device");
-        const extensions = [_][]const u8 {
-            "VK_KHR_swapchain",
-        };
-        r.device = r.physical_device.create_device(&extensions);
+    const Compare_result = enum {
+        better,
+        equal,
+        worse,
+    };
+    
+    fn compare_order(T: type, order: []const T, old: T, new: T) Compare_result {
+        for (order) |item| {
+            if (old == item and new == item) {
+                return .equal;
+            }
+            if (new == item) {
+                return .better;
+            }
+            if (old == item) {
+                return .worse;
+            }
+        }
+        return .equal;
     }
     
-    fn init_descriptor_info(r: *Render) void {
+    fn init_descriptor_info(r: *Render) !void {
         const bindings = [_]lib_vulkan.types.Descriptor_set_layout_binding {
             .{
                 .binding = 0,
-                .descriptorType = .sampled_image,
-                .descriptorCount = 8,
-                .stageFlags = .just(.fragment),
-                .pImmutableSamplers = null,
+                .descriptor_type = .sampled_image,
+                .descriptor_count = 8,
+                .stage_flags = .just(.fragment),
+                .immutable_samplers = null,
             },
         };
-        r.descriptor_set_layout = r.device.create_descriptor_set_layout(&bindings);
+        r.descriptor_set_layout = try r.device.create_descriptor_set_layout(&bindings);
         const max_sizes = [_]lib_vulkan.types.Descriptor_pool_size {
             .{
                 .type = .sampled_image,
-                .descriptorCount = 8 * max_swapchain_size,
+                .descriptor_count = 8 * max_swapchain_size,
             },
         };
-        r.descriptor_pool = r.device.create_descriptor_pool(max_swapchain_size, &max_sizes);
+        r.descriptor_pool = try r.device.create_descriptor_pool(max_swapchain_size, &max_sizes);
     }
     
-    fn init_swapchain(r: *Render) void {
-        const surface_properties = r.surface.get_properties();
+    fn init_swapchain(r: *Render) !void {
+        const surface_properties = try r.surface.get_properties();
         
         if (surface_properties.max_swapchain_images) |max_swapchain_images| {
             u.log(.{"Swapchain image count must be between ",surface_properties.min_swapchain_images," and ",max_swapchain_images});
@@ -477,14 +619,14 @@ pub const Render = struct {
         u.log(.{"Selecting transform: ",r.swapchain_tranform});
         u.log(.{"Supported alpha composite modes: ",surface_properties.supported_alpha_composite_mode});
         r.swapchain_alpha_composite = surface_properties.supported_alpha_composite_mode.select_best(&.{
-            .fully_opaque,
+            .@"opaque",
             .inherit,
             .pre_multiplied,
             .post_multiplied,
         });
         u.log(.{"Selecting alpha composite mode: ",r.swapchain_alpha_composite});
         
-        const supported_formats = r.surface.get_supported_formats();
+        const supported_formats = try r.surface.get_supported_formats();
         u.log_start("Supported formats:");
         for (supported_formats) |format| {
             u.log(.{"Format: ",format.format,", color space: ",format.color_space});
@@ -518,7 +660,7 @@ pub const Render = struct {
         r.swapchain_image_format = selected_format.format;
         r.swapchain_image_colorspace = selected_format.color_space;
         
-        const supported_present_modes = r.surface.get_supported_present_modes();
+        const supported_present_modes = try r.surface.get_supported_present_modes();
         u.log_start("Supported present modes:");
         for (supported_present_modes) |present_mode| {
             u.log(present_mode);
@@ -535,19 +677,19 @@ pub const Render = struct {
         u.log(.{"Selected present mode ",r.selected_present_mode});
         u.alloc.free(supported_present_modes);
         
-        r.swapchain = r.device.create_swapchain(r.surface.surface, r.swapchain_min_image_count, r.swapchain_image_format, r.swapchain_image_colorspace, r.render_size, 1,
-                                                r.swapchain_tranform, r.swapchain_alpha_composite, r.selected_present_mode, null);
+        r.swapchain = try r.device.create_swapchain(r.surface.surface, r.swapchain_min_image_count, r.swapchain_image_format, r.swapchain_image_colorspace, r.render_size, 1,
+                                                    r.swapchain_tranform, r.swapchain_alpha_composite, r.selected_present_mode, null);
         
     }
     
-    fn init_swapchain_images(r: *Render) void {
-        const swapchain_images = r.swapchain.get_images();
+    fn init_swapchain_images(r: *Render) !void {
+        const swapchain_images = try r.swapchain.get_images();
         if (swapchain_images.len > max_swapchain_size) {
             @panic("swapchain is too large");
         }
         r.swapimages = u.alloc.alloc(Swapimage, swapchain_images.len) catch @panic("no memory");
         for (swapchain_images, r.swapimages) |image, *swapimage| {
-            swapimage.* = .init_from(image, r);
+            swapimage.* = try .init_from(image, r);
         }
         u.alloc.free(swapchain_images);
     }
@@ -563,7 +705,7 @@ pub const Render = struct {
         return null;
     }
     
-    fn init_pipeline(r: *Render) void {
+    fn init_pipeline(r: *Render) !void {
         u.log_start("Create graphics pipeline");
         const width: u32 = r.render_size.width;
         const height: u32 = r.render_size.height;
@@ -581,7 +723,7 @@ pub const Render = struct {
             .{
                 .binding = 0,
                 .stride = @sizeOf(Draw_object),
-                .inputRate = .instance,
+                .input_rate = .instance,
             },
         };
         const vertex_attributes = [_]lib_vulkan.types.Vertex_input_attribute_description {
@@ -645,64 +787,39 @@ pub const Render = struct {
             .image_format = r.swapchain_image_format,
             .keep_previous = false,
         };
-        r.pipeline = r.device.create_graphics_pipeline(&create_info);
+        r.pipeline = try r.device.create_graphics_pipeline(&create_info);
         var create_info_keep = create_info;
         create_info_keep.keep_previous = true;
-        r.pipeline_keep = r.device.create_graphics_pipeline(&create_info_keep);
-        u.log_end({});
-    }
-    
-    pub fn deinit(r: *Render) void {
-        u.log_start("Deinit vulkan render");
-        if (r.rendering_active) {
-            r.rendering_disable();
-        }
-        u.log("Tasks");
-        r.temp_task.deinit();
-        r.task_allocator.deinit();
-        u.log("General objects");
-        r.dummy_image.deinit();
-        r.descriptor_pool.deinit();
-        r.device.destroy_descriptor_set_layout(r.descriptor_set_layout);
-        r.staging_buffer.deinit();
-        r.index_buffer.deinit();
-        r.device.destroy_fence(r.wait_fence);
-        u.log("Device");
-        r.device.deinit();
-        u.log("Window");
-        r.surface.deinit();
-        u.log("Instance");
-        r.instance.deinit();
-        r.loader.deinit();
+        r.pipeline_keep = try r.device.create_graphics_pipeline(&create_info_keep);
         u.log_end({});
     }
     
     pub fn create_texture(r: *Render, size: u.Vec2i) !*Texture {
-        const image = r.device.create_image(size.x.to(u32), size.y.to(u32), .r8g8b8a8_srgb, .create(&.{.transfer_dst, .sampled}));
+        const image = try r.device.create_image(size.x.to(u32), size.y.to(u32), .r8g8b8a8_srgb, .create(&.{.transfer_dst, .sampled}));
         
-        r.temp_task.start_recording(true);
+        try r.temp_task.start_recording(true);
         const image_subresource = lib_vulkan.types.Image_subresource_range {
-            .aspectMask = .just(.color),
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
+            .aspect_mask = .just(.color),
+            .base_mip_level = 0,
+            .level_count = 1,
+            .base_array_layer = 0,
+            .layer_count = 1,
         };
         const image_barrier = lib_vulkan.types.Image_memory_barrier {
-            .srcAccessMask = .empty(),
-            .dstAccessMask = .just(.shader_read),
-            .oldLayout = .undefined,
-            .newLayout = .shader_read_only_optimal,
-            .srcQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
-            .dstQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
+            .src_access_mask = .empty(),
+            .dst_access_mask = .just(.shader_read),
+            .old_layout = .undefined,
+            .new_layout = .shader_read_only_optimal,
+            .src_queue_family_index = lib_vulkan.types.queue_family_ignored,
+            .dst_queue_family_index = lib_vulkan.types.queue_family_ignored,
             .image = image.image,
-            .subresourceRange = image_subresource,
+            .subresource_range = image_subresource,
         };
         r.temp_task.barrier(.just(.top_of_pipe), .just(.fragment_shader), &.{}, &.{}, &.{image_barrier});
-        r.temp_task.end_recording();
-        r.temp_task.submit(&.{}, null, r.wait_fence);
-        r.device.wait_for_fence(r.wait_fence, null);
-        r.temp_task.reset();
+        try r.temp_task.end_recording();
+        try r.temp_task.submit(&.{}, null, r.wait_fence);
+        try r.device.wait_for_fence(r.wait_fence, null);
+        try r.temp_task.reset();
         
         const texture = u.alloc.create(Texture) catch @panic("no memory");
         texture.* = .{
@@ -720,7 +837,7 @@ pub const Render = struct {
     
     pub fn update_texture(r: *Render, texture: *Texture, rect: u.Rect2i, data: []const u.Screen_color) !void {
         _ = r;
-        texture.write(rect.left().to(u32), rect.top().to(u32), rect.size.x.to(u32), rect.size.y.to(u32), data);
+        try texture.write(rect.left().to(u32), rect.top().to(u32), rect.size.x.to(u32), rect.size.y.to(u32), data);
     }
     
     
@@ -735,11 +852,11 @@ pub const Render = struct {
             return null;
         }
         
-        const surface_properties = r.surface.get_properties();
+        const surface_properties = try r.surface.get_properties();
         var use_size = if (surface_properties.current_size) |surface_size| (
             surface_size
         ) else if (suggested_size) |size_available| (
-            .{
+            lib_vulkan.types.Extent_2d {
                 .width = size_available.x.to(u32),
                 .height = size_available.y.to(u32),
             }
@@ -759,26 +876,26 @@ pub const Render = struct {
             use_size.height = surface_properties.max_size.height;
         }
         u.log(.{"Size: ",use_size});
-        if (use_size != r.render_size) {
+        if (use_size.width != r.render_size.width or use_size.height != r.render_size.height) {
             u.log(.{"This is different that the old size ",r.render_size});
             if (use_size.width == 0 or use_size.height == 0) {
                 r.rendering_disable();
             } else if (r.render_size.width == 0 or r.render_size.height == 0) {
-                r.rendering_enable(.create(.create(use_size.width), .create(use_size.height)));
+                try r.rendering_enable(.create(.create(use_size.width), .create(use_size.height)));
             } else {
                 r.rendering_disable();
-                r.rendering_enable(.create(.create(use_size.width), .create(use_size.height)));
+                try r.rendering_enable(.create(.create(use_size.width), .create(use_size.height)));
             }
             u.assert(r.render_size.width == use_size.width);
             u.assert(r.render_size.height == use_size.height);
         }
         
-        if (!r.rendering_active) {
+        if (!r.rendering_active()) {
             u.log("Surface is empty, so not rendering");
             return null;
         }
         u.log(.{"Aquiring swapchain image"});
-        const index = r.swapchain.aquire_next_image(null, r.wait_fence) orelse {
+        const index = r.swapchain.aquire_next_image(null, r.wait_fence) catch {
             u.log(.{"Swapchain broken, disabling rendering"});
             r.rendering_disable();
             u.log(.{"Not rendering this frame"});
@@ -786,11 +903,10 @@ pub const Render = struct {
         };
         u.log(.{"Aquired image index: ",index});
         u.log(.{"Wait until the image is useable"});
-        r.device.wait_for_fence(r.wait_fence, null);
+        try r.device.wait_for_fence(r.wait_fence, null);
         u.log(.{"We can now use the image"});
         
         const swapimage = &r.swapimages[index];
-        r.draw_active = true;
         r.draw_frame = .{
             .swapimage = swapimage,
             .index = index,
@@ -799,34 +915,35 @@ pub const Render = struct {
             .already_drawn = false,
             .using_images = [1]?*lib_vulkan.Image { null } ** textures_per_rendering,
         };
+        return .create(.create(use_size.width), .create(use_size.height));
     }
     
     pub fn draw_object(r: *Render, rect: u.Rect2i, color: u.Screen_color, texture: *Texture, texture_rect: u.Rect2i, texture_offset: u.Vec2i) !void {
-        r.draw_frame.draw_object(rect, color, texture, texture_rect, texture_offset);
+        try r.draw_frame.draw_object(rect, color, texture, texture_rect, texture_offset);
     }
     
     pub fn end_frame(r: *Render) !void {
-        r.draw_frame.finish();
+        try r.draw_frame.finish();
     }
     
-    pub fn write_buffer(r: *Render, buffer: *lib_vulkan.Buffer, offset: usize, data: []const u8) void {
+    pub fn write_buffer(r: *Render, buffer: *lib_vulkan.Buffer, offset: usize, data: []const u8) !void {
         if (buffer.mapped) |write_ptr| {
             @memcpy(write_ptr[offset..offset+data.len], data);
-            buffer.flush_region(offset, data.len);
+            try buffer.flush_region(offset, data.len);
         } else {
-            r.write_buffer(&r.staging_buffer, 0, data);
-            r.temp_task.start_recording(true);
+            try r.write_buffer(&r.staging_buffer, 0, data);
+            try r.temp_task.start_recording(true);
             r.temp_task.copy_buffer(data.len, r.staging_buffer.buffer, 0, buffer.buffer, offset);
-            r.temp_task.end_recording();
-            r.temp_task.submit(&.{}, null, r.wait_fence);
-            r.device.wait_for_fence(r.wait_fence, null);
-            r.temp_task.reset();
+            try r.temp_task.end_recording();
+            try r.temp_task.submit(&.{}, null, r.wait_fence);
+            try r.device.wait_for_fence(r.wait_fence, null);
+            try r.temp_task.reset();
         }
     }
     
-    pub fn write_whole_buffer(r: *Render, buffer: *lib_vulkan.Buffer, data: []const u8) void {
+    pub fn write_whole_buffer(r: *Render, buffer: *lib_vulkan.Buffer, data: []const u8) !void {
         u.assert(data.len == buffer.size);
-        r.write_buffer(buffer, 0, data);
+        try r.write_buffer(buffer, 0, data);
     }
 };
 
@@ -844,31 +961,31 @@ const Swapimage = struct {
     render_done_fence: lib_vulkan.Fence,
     bound_images: [textures_per_rendering]lib_vulkan.types.Image_view,
     
-    pub fn init_from(image: lib_vulkan.types.Image, r: *Render) Swapimage {
-        const view = r.device.create_image_view(image, r.swapchain_image_format);
+    pub fn init_from(image: lib_vulkan.types.Image, r: *Render) !Swapimage {
+        const view = try r.device.create_image_view(image, r.swapchain_image_format);
         const attachments = [_]lib_vulkan.types.Image_view {view};
-        const framebuffer = r.device.create_framebuffer(r.pipeline.render_pass, &attachments, r.render_size.width, r.render_size.height, 1);
-        const descriptor_set = r.descriptor_pool.allocate_descriptor_set(r.descriptor_set_layout);
+        const framebuffer = try r.device.create_framebuffer(r.pipeline.render_pass, &attachments, r.render_size.width, r.render_size.height, 1);
+        const descriptor_set = try r.descriptor_pool.allocate_descriptor_set(r.descriptor_set_layout);
         for (0..textures_per_rendering) |i| {
             descriptor_set.set_image(0, @intCast(i), .sampled_image, undefined, r.dummy_image.image.view, .shader_read_only_optimal);
         }
-        const render_finished_semaphore = r.device.create_semaphore();
-        const render_done_fence = r.device.create_fence(false);
-        const vertex_buffer = r.device.create_buffer(@sizeOf(Draw_object) * draw_buffer_size, .just(.vertex_buffer), .stream);
-        var indirect_buffer = r.device.create_buffer(@sizeOf(lib_vulkan.types.Draw_indexed_indirect_command), .just(.indirect_buffer), .stream);
+        const render_finished_semaphore = try r.device.create_semaphore();
+        const render_done_fence = try r.device.create_fence(false);
+        const vertex_buffer = try r.device.create_buffer(@sizeOf(Draw_object) * draw_buffer_size, .just(.vertex_buffer), .stream);
+        var indirect_buffer = try r.device.create_buffer(@sizeOf(lib_vulkan.types.Draw_indexed_indirect_command), .just(.indirect_buffer), .stream);
         if (vertex_buffer.mapped == null) {
             @panic("vertex buffer must be mappable");
         }
         const draw_command = lib_vulkan.types.Draw_indexed_indirect_command {
-            .indexCount = 6,
-            .instanceCount = 0,
-            .firstIndex = 0,
-            .vertexOffset = 0,
-            .firstInstance = 0,
+            .index_count = 6,
+            .instance_count = 0,
+            .first_index = 0,
+            .vertex_offset = 0,
+            .first_instance = 0,
         };
-        r.write_whole_buffer(&indirect_buffer, std.mem.asBytes(&draw_command));
+        try r.write_whole_buffer(&indirect_buffer, std.mem.asBytes(&draw_command));
         
-        const draw_task = r.task_allocator.create_task();
+        const draw_task = try r.task_allocator.create_task();
         
         return .{
             .r = r,
@@ -898,7 +1015,7 @@ const Swapimage = struct {
     
     pub fn wait_rendering_done(swapimage: *Swapimage) void {
         if (swapimage.is_rendering) {
-            swapimage.r.device.wait_for_fence(swapimage.render_done_fence, null);
+            swapimage.r.device.wait_for_fence(swapimage.render_done_fence, null) catch {};
             swapimage.is_rendering = false;
         }
     }
@@ -917,11 +1034,11 @@ pub const Draw_frame = struct {
     already_drawn: bool,
     using_images: [textures_per_rendering]?*lib_vulkan.Image,
     
-    fn submit_draw(draw_frame: *Draw_frame, present: bool) void {
+    fn submit_draw(draw_frame: *Draw_frame, present: bool) !void {
         u.log_start(.{"Submitting draw commands"});
         u.log(.{"Wait until rendering is done"});
         draw_frame.swapimage.wait_rendering_done();
-        draw_frame.write_objects();
+        try draw_frame.write_objects();
         draw_frame.swapimage.is_rendering = true;
         const semaphore = if (present) draw_frame.swapimage.render_finished_semaphore else null;
         
@@ -939,12 +1056,12 @@ pub const Draw_frame = struct {
         }
         const pipeline = if (draw_frame.already_drawn) draw_frame.swapimage.r.pipeline_keep else draw_frame.swapimage.r.pipeline;
         var draw_task = draw_frame.swapimage.draw_task;
-        draw_task.reset();
-        draw_task.start_recording(false);
+        try draw_task.reset();
+        try draw_task.start_recording(false);
         const clear_values = [_]lib_vulkan.types.Clear_value {
             .{
                 .color = .{
-                    .float32 = .{0, 0, 0, 1}
+                    .float_32 = .{0, 0, 0, 1}
                 }
             }
         };
@@ -955,28 +1072,28 @@ pub const Draw_frame = struct {
         draw_task.bind_descriptor_set(.graphics, pipeline.layout, 0, draw_frame.swapimage.descriptor_set.descriptor_set);
         draw_task.draw_indexed_indirect(draw_frame.swapimage.indirect_buffer.buffer, 0, 1, @sizeOf(lib_vulkan.types.Draw_indexed_indirect_command));
         draw_task.end_render_pass();
-        draw_task.end_recording();
+        try draw_task.end_recording();
         u.log(.{"Submit"});
-        draw_task.submit(&.{}, semaphore, draw_frame.swapimage.render_done_fence);
+        try draw_task.submit(&.{}, semaphore, draw_frame.swapimage.render_done_fence);
         
         draw_frame.already_drawn = true;
         draw_frame.draw_count = 0;
         draw_frame.using_images = [1]*lib_vulkan.Image { dummy_image } ** textures_per_rendering;
         if (present) {
             u.log(.{"Also submit present"});
-            draw_frame.swapimage.r.swapchain.submit_present(draw_frame.index, &.{draw_frame.swapimage.render_finished_semaphore});
+            try draw_frame.swapimage.r.swapchain.submit_present(draw_frame.index, &.{draw_frame.swapimage.render_finished_semaphore});
         } else {
             u.log(.{"Not presenting yet"});
         }
         u.log_end(.{"Submitting done"});
     }
     
-    pub fn draw_object(draw_frame: *Draw_frame, rect: u.Rect2i, color: u.Screen_color, tex_image: *Texture, texture_rect: u.Rect2i, texture_offset: u.Vec2i) void {
+    pub fn draw_object(draw_frame: *Draw_frame, rect: u.Rect2i, color: u.Screen_color, tex_image: *Texture, texture_rect: u.Rect2i, texture_offset: u.Vec2i) !void {
         if (draw_frame.draw_count >= draw_buffer_size) {
             if (!draw_frame.already_drawn) {
                 u.log(.{"WARNING: Too many objects, this is slow! "});
             }
-            draw_frame.submit_draw(false);
+            try draw_frame.submit_draw(false);
         }
         std.debug.assert(draw_frame.draw_count < draw_buffer_size);
         
@@ -997,7 +1114,7 @@ pub const Draw_frame = struct {
             if (!draw_frame.already_drawn) {
                 u.log(.{"WARNING: Too many textures, this is slow! "});
             }
-            draw_frame.submit_draw(false);
+            try draw_frame.submit_draw(false);
             u.assert(draw_frame.using_images[0] == null);
             draw_frame.using_images[0] = add_image;
             texture_index = 0;
@@ -1024,15 +1141,15 @@ pub const Draw_frame = struct {
         draw_frame.draw_count += 1;
     }
     
-    fn write_objects(draw_frame: *Draw_frame) void {
+    fn write_objects(draw_frame: *Draw_frame) !void {
         u.log(.{"Upload ",draw_frame.draw_count," objects"});
-        draw_frame.swapimage.r.write_buffer(&draw_frame.swapimage.vertex_buffer, 0, std.mem.sliceAsBytes(draw_frame.draw_objects[0..draw_frame.draw_count]));
+        try draw_frame.swapimage.r.write_buffer(&draw_frame.swapimage.vertex_buffer, 0, std.mem.sliceAsBytes(draw_frame.draw_objects[0..draw_frame.draw_count]));
         const draw_count: u32 = draw_frame.draw_count;
-        draw_frame.swapimage.r.write_buffer(&draw_frame.swapimage.indirect_buffer, 4, std.mem.asBytes(&draw_count));
+        try draw_frame.swapimage.r.write_buffer(&draw_frame.swapimage.indirect_buffer, 4, std.mem.asBytes(&draw_count));
     }
     
-    pub fn finish(draw_frame: *Draw_frame) void {
-        draw_frame.submit_draw(true);
+    pub fn finish(draw_frame: *Draw_frame) !void {
+        try draw_frame.submit_draw(true);
     }
     
     pub fn size(draw_frame: *Draw_frame) u.Vec2i {
@@ -1048,58 +1165,58 @@ pub const Texture = struct {
     image: lib_vulkan.Image,
     r: *Render,
     
-    pub fn write(image: *Texture, offset_x: u32, offset_y: u32, width: u32, height: u32, data: []const u.Screen_color) void {
+    pub fn write(image: *Texture, offset_x: u32, offset_y: u32, width: u32, height: u32, data: []const u.Screen_color) !void {
         const r = image.r;
         u.assert(data.len == width * height);
         u.log_start(.{"Writing ",data.len," bytes to image"});
         u.log("Writing to staging buffer");
-        r.write_buffer(&r.staging_buffer, 0, std.mem.sliceAsBytes(data));
+        try r.write_buffer(&r.staging_buffer, 0, std.mem.sliceAsBytes(data));
         u.log("Wait until the image is not used");
         image.wait_rendering_done();
         
         u.log("Record command");
-        r.temp_task.start_recording(true);
+        try r.temp_task.start_recording(true);
         const image_subresource = lib_vulkan.types.Image_subresource_range {
-            .aspectMask = .just(.color),
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
+            .aspect_mask = .just(.color),
+            .base_mip_level = 0,
+            .level_count = 1,
+            .base_array_layer = 0,
+            .layer_count = 1,
         };
         const image_barrier_1 = lib_vulkan.types.Image_memory_barrier {
-            .srcAccessMask = .just(.shader_read),
-            .dstAccessMask = .just(.transfer_write),
-            .oldLayout = .shader_read_only_optimal,
-            .newLayout = .transfer_dst_optimal,
-            .srcQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
-            .dstQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
+            .src_access_mask = .just(.shader_read),
+            .dst_access_mask = .just(.transfer_write),
+            .old_layout = .shader_read_only_optimal,
+            .new_layout = .transfer_dst_optimal,
+            .src_queue_family_index = lib_vulkan.types.queue_family_ignored,
+            .dst_queue_family_index = lib_vulkan.types.queue_family_ignored,
             .image = image.image.image,
-            .subresourceRange = image_subresource,
+            .subresource_range = image_subresource,
         };
         r.temp_task.barrier(.just(.fragment_shader), .just(.transfer), &.{}, &.{}, &.{image_barrier_1});
         r.temp_task.copy_buffer_to_image(r.staging_buffer.buffer, image.image.image, offset_x, offset_y, width, height);
         const image_barrier_2 = lib_vulkan.types.Image_memory_barrier {
-            .srcAccessMask = .just(.transfer_write),
-            .dstAccessMask = .just(.shader_read),
-            .oldLayout = .transfer_dst_optimal,
-            .newLayout = .shader_read_only_optimal,
-            .srcQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
-            .dstQueueFamilyIndex = lib_vulkan.types.queue_family_ignored,
+            .src_access_mask = .just(.transfer_write),
+            .dst_access_mask = .just(.shader_read),
+            .old_layout = .transfer_dst_optimal,
+            .new_layout = .shader_read_only_optimal,
+            .src_queue_family_index = lib_vulkan.types.queue_family_ignored,
+            .dst_queue_family_index = lib_vulkan.types.queue_family_ignored,
             .image = image.image.image,
-            .subresourceRange = image_subresource,
+            .subresource_range = image_subresource,
         };
         r.temp_task.barrier(.just(.transfer), .just(.fragment_shader), &.{}, &.{}, &.{image_barrier_2});
-        r.temp_task.end_recording();
+        try r.temp_task.end_recording();
         u.log("Submit command");
-        r.temp_task.submit(&.{}, null, r.wait_fence);
-        r.device.wait_for_fence(r.wait_fence, null);
+        try r.temp_task.submit(&.{}, null, r.wait_fence);
+        try r.device.wait_for_fence(r.wait_fence, null);
         u.log("Finished");
-        r.temp_task.reset();
+        try r.temp_task.reset();
         u.log_end({});
     }
     
     pub fn wait_rendering_done(image: *Texture) void {
-        if (image.r.rendering_active) {
+        if (image.r.rendering_active()) {
             for (image.r.swapimages) |*swapimage| {
                 if (swapimage.is_rendering) {
                     const is_using_this_image = for (swapimage.bound_images) |using_image| {

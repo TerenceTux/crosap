@@ -7,6 +7,9 @@
         .util = .{
             .path = "../../util",
         },
+        .vulkan = .{
+            .path = "../vulkan",
+        },
     },
     .paths = .{
         "build.zig.zon",

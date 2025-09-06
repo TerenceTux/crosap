@@ -120,6 +120,8 @@ pub const App = struct {
         draw.image(.create(.create(4*27), .create(4*3)), app.cr.general.get(.nfont_percent));
         draw.image(.create(.create(4*28), .create(4*3)), app.cr.general.get(.nfont_ampersand));
         draw.image(.create(.create(4*29), .create(4*3)), app.cr.general.get(.nfont_at));
+        draw.image(.create(.create(4*30), .create(4*3)), app.cr.general.get(.nfont_backtick));
+        draw.image(.create(.create(4*31), .create(4*3)), app.cr.general.get(.nfont_tilde));
         
         draw.image(.create(.create(0), .create(64)), app.cr.general.texture.get(.create(.zero, app.cr.general.texture.size)));
     }

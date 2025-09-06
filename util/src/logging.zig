@@ -64,6 +64,7 @@ pub const Debug_Logger = struct {
     fn print_value_array(l: *Logger, Child: type, v: []const Child) void {
         var is_text = false;
         if (Child == u8) {
+            is_text = true;
             for (v) |char| {
                 if (!std.ascii.isAscii(char)) {
                     is_text = false;
@@ -146,8 +147,12 @@ pub const Debug_Logger = struct {
             } else {
                 l.stream_write("null");
             },
-            .error_union => l.stream_write("<error_union>"),
-            .error_set => l.stream_write("<error_set>"),
+            .error_union => if (v) |v_val| {
+                l.print_value(v_val);
+            } else |v_err| {
+                l.print_value(v_err);
+            },
+            .error_set => l.stream_write(@errorName(v)),
             .@"enum" => l.stream_write(@tagName(v)),
             .@"union" => l.stream_write(@tagName(v)),
             .@"fn" => l.stream_write(@typeName(@TypeOf(v))),

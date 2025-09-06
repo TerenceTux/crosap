@@ -13,7 +13,7 @@ pub const Swapchain = struct {
     
     pub fn get_images(swapchain: *Swapchain) ![]types.Image {
         var count: u32 = undefined;
-        try swapchain.device.call(.get_swapchain_images, .{
+        try swapchain.device.call(.khr_get_swapchain_images, .{
             swapchain.device.device,
             swapchain.swapchain,
             &count,
@@ -25,7 +25,7 @@ pub const Swapchain = struct {
         }
         
         const list = u.alloc.alloc(types.Image, count) catch @panic("no memory");
-        try swapchain.device.call(.khr_set_swapchain_images, .{
+        try swapchain.device.call(.khr_get_swapchain_images, .{
             swapchain.device.device,
             swapchain.swapchain,
             &count,
@@ -45,9 +45,9 @@ pub const Swapchain = struct {
             &image_index,
         });
         result catch |err| switch (err) {
-            .suboptimal => {
+            error.suboptimal => {
                 if (fence) |e_fence| {
-                    swapchain.device.wait_for_fence(e_fence, null);
+                    try swapchain.device.wait_for_fence(e_fence, null);
                 }
                 return err;
             },
@@ -65,12 +65,12 @@ pub const Swapchain = struct {
             image_index,
         };
         const present_info = types.Khr_present_info {
-            .waitSemaphoreCount = @intCast(wait_semaphores.len),
-            .pWaitSemaphores = wait_semaphores.ptr,
-            .swapchainCount = swapchains.len,
-            .pSwapchains = &swapchains,
-            .pImageIndices = &image_indexes,
-            .pResults = null,
+            .wait_semaphore_count = @intCast(wait_semaphores.len),
+            .wait_semaphores = wait_semaphores.ptr,
+            .swapchain_count = swapchains.len,
+            .swapchains = &swapchains,
+            .image_indices = &image_indexes,
+            .results = null,
         };
         try swapchain.device.call(.khr_queue_present, .{swapchain.device.queue, &present_info});
     }

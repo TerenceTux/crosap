@@ -44,6 +44,7 @@ pub fn main() void {
                 },
                 .quit => |_| {
                     u.log(.{"Close button was pressed, so we quit"});
+                    u.log_end(.{"Ignore other events"});
                     break:main_loop;
                 }
             }

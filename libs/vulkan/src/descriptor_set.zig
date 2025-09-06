@@ -11,20 +11,20 @@ pub const Descriptor_set = struct {
         const image_infos = [_]types.Descriptor_image_info {
             .{
                 .sampler = sampler,
-                .imageView = image_view,
-                .imageLayout = image_layout,
+                .image_view = image_view,
+                .image_layout = image_layout,
             },
         };
-        const write_infos = [_]types.Write_descriptor_Set {
+        const write_infos = [_]types.Write_descriptor_set {
             .{
-                .dstSet = desc_set.descriptor_set,
-                .dstBinding = binding,
-                .dstArrayElement = element,
-                .descriptorCount = 1,
-                .descriptorType = descriptor_type,
-                .pImageInfo = &image_infos,
-                .pBufferInfo = undefined,
-                .pTexelBufferView = undefined,
+                .dst_set = desc_set.descriptor_set,
+                .dst_binding = binding,
+                .dst_array_element = element,
+                .descriptor_count = 1,
+                .descriptor_type = descriptor_type,
+                .image_info = &image_infos,
+                .buffer_info = undefined,
+                .texel_buffer_view = undefined,
             },
         };
         desc_set.device.call(.update_descriptor_sets, .{desc_set.device.device, write_infos.len, &write_infos, 0, undefined});
@@ -46,9 +46,9 @@ pub const Descriptor_pool = struct {
     pub fn allocate_descriptor_set(desc_pool: *Descriptor_pool, layout: types.Descriptor_set_layout) !Descriptor_set {
         const layouts = [1]types.Descriptor_set_layout { layout };
         const create_info = types.Descriptor_set_allocate_info {
-            .descriptorPool = desc_pool.descriptor_pool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &layouts,
+            .descriptor_pool = desc_pool.descriptor_pool,
+            .descriptor_set_count = 1,
+            .set_layouts = &layouts,
         };
         var descriptor_sets: [1]types.Descriptor_set = undefined;
         try desc_pool.device.call(.allocate_descriptor_sets, .{desc_pool.device.device, &create_info, &descriptor_sets});

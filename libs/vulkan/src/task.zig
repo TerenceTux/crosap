@@ -19,7 +19,7 @@ pub const Task = struct {
         const flags: types.Command_buffer_usage_flags = if (submit_once) .just(.one_time_submit) else .empty();
         const begin_info = types.Command_buffer_begin_info {
             .flags = flags,
-            .pInheritanceInfo = undefined,
+            .inheritance_info = undefined,
         };
         try task.device.call(.begin_command_buffer, .{task.command_buffer, &begin_info});
     }
@@ -34,7 +34,7 @@ pub const Task = struct {
     
     pub fn submit(task: *Task, wait_semaphores: []const types.Semaphore, signal_semaphore: ?types.Semaphore, signal_fence: ?types.Fence) !void {
         var one_wait_mask = [_] types.Pipeline_stage_flags { .just(.top_of_pipe) };
-        var wait_mask: []types.pipeline_stage_flags = &one_wait_mask;
+        var wait_mask: []types.Pipeline_stage_flags = &one_wait_mask;
         if (wait_semaphores.len > one_wait_mask.len) {
             wait_mask = u.alloc.alloc(types.Pipeline_stage_flags, wait_semaphores.len) catch @panic("no memory");
             for (wait_mask) |*item| {
@@ -53,13 +53,13 @@ pub const Task = struct {
         };
         const submits = [_]types.Submit_info {
             .{
-                .waitSemaphoreCount = @intCast(wait_semaphores.len),
-                .pWaitSemaphores = wait_semaphores.ptr,
-                .pWaitDstStageMask = wait_mask.ptr,
-                .commandBufferCount = command_buffers.len,
-                .pCommandBuffers = &command_buffers,
-                .signalSemaphoreCount = if (signal_semaphore != null) 1 else 0,
-                .pSignalSemaphores = &signal_semaphores,
+                .wait_semaphore_count = @intCast(wait_semaphores.len),
+                .wait_semaphores = wait_semaphores.ptr,
+                .wait_dst_stage_mask = wait_mask.ptr,
+                .command_buffer_count = command_buffers.len,
+                .command_buffers = &command_buffers,
+                .signal_semaphore_count = if (signal_semaphore != null) 1 else 0,
+                .signal_semaphores = &signal_semaphores,
             }
         };
         try task.device.call(.queue_submit, .{task.device.queue, submits.len, &submits, signal_fence orelse types.null_handle});
@@ -67,16 +67,16 @@ pub const Task = struct {
     
     pub fn start_render_pass(task: *Task, framebuffer: types.Framebuffer, render_size: types.Extent_2d, render_pass: types.Render_pass, clear_values: []const types.Clear_value) void {
         const render_info = types.Render_pass_begin_info {
-            .renderPass = render_pass,
+            .render_pass = render_pass,
             .framebuffer = framebuffer,
-            .renderArea = .{
+            .render_area = .{
                 .offset = .{.x = 0, .y = 0},
                 .extent = render_size,
             },
-            .clearValueCount = @intCast(clear_values.len),
-            .pClearValues = clear_values.ptr,
+            .clear_value_count = @intCast(clear_values.len),
+            .clear_values = clear_values.ptr,
         };
-        task.device.call(.cmd_begin_render_pass, .{task.command_buffer, &render_info, .content_inline});
+        task.device.call(.cmd_begin_render_pass, .{task.command_buffer, &render_info, .@"inline"});
     }
     
     pub fn end_render_pass(task: *Task) void {
@@ -94,7 +94,7 @@ pub const Task = struct {
     }
     
     pub fn bind_index_buffer(task: *Task, buffer: types.Buffer) void {
-        task.device.call(.cmd_bind_index_buffer, .{task.command_buffer, buffer, 0, .uint16});
+        task.device.call(.cmd_bind_index_buffer, .{task.command_buffer, buffer, 0, .uint_16});
     }
     
     pub fn bind_descriptor_set(task: *Task, kind: types.Pipeline_bind_point, layout: types.Pipeline_layout, set_number: u32, descriptor_set: types.Descriptor_set) void {
@@ -123,8 +123,8 @@ pub const Task = struct {
     pub fn copy_buffer(task: *Task, size: usize, source: types.Buffer, source_offset: usize, destination: types.Buffer, destination_offset: usize) void {
         const regions = [_]types.Buffer_copy {
             .{
-                .srcOffset = source_offset,
-                .dstOffset = destination_offset,
+                .src_offset = source_offset,
+                .dst_offset = destination_offset,
                 .size = size,
             },
         };
@@ -134,21 +134,21 @@ pub const Task = struct {
     pub fn copy_buffer_to_image(task: *Task, buffer: types.Buffer, image: types.Image, offset_x: u32, offset_y: u32, width: u32, height: u32) void {
         const regions = [_]types.Buffer_image_copy {
             .{
-                .bufferOffset = 0,
-                .bufferRowLength = 0,
-                .bufferImageHeight = 0,
-                .imageSubresource = .{
-                    .aspectMask = .just(.color),
-                    .mipLevel = 0,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
+                .buffer_offset = 0,
+                .buffer_row_length = 0,
+                .buffer_image_height = 0,
+                .image_subresource = .{
+                    .aspect_mask = .just(.color),
+                    .mip_level = 0,
+                    .base_array_layer = 0,
+                    .layer_count = 1,
                 },
-                .imageOffset = .{
+                .image_offset = .{
                     .x = @intCast(offset_x),
                     .y = @intCast(offset_y),
                     .z = 0,
                 },
-                .imageExtent = .{
+                .image_extent = .{
                     .width = width,
                     .height = height,
                     .depth = 1,
@@ -183,9 +183,9 @@ pub const Task_allocator = struct {
     
     pub fn create_task(task_allocator: *Task_allocator) !Task {
         const create_info = types.Command_buffer_allocate_info {
-            .commandPool = task_allocator.command_pool,
+            .command_pool = task_allocator.command_pool,
             .level = .primary,
-            .commandBufferCount = 1,
+            .command_buffer_count = 1,
         };
         var command_buffer: types.Command_buffer = undefined;
         try task_allocator.device.call(.allocate_command_buffers, .{task_allocator.device.device, &create_info, @ptrCast(&command_buffer)});
