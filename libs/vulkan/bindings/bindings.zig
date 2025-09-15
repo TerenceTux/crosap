@@ -167,7 +167,7 @@ fn Empty_flags(T: type) type {
 }
 
 pub const Command = struct {
-    name: []const u8,
+    name: [:0]const u8,
     function: type,
     errors: type,
     
@@ -211,7 +211,7 @@ pub const Command = struct {
 };
 
 pub const Extension = struct {
-    name: []const u8,
+    name: [:0]const u8,
     commands: []const @Type(.enum_literal),
 };
 
@@ -28961,7 +28961,7 @@ pub const Device_extension = enum {
 pub const extension_commands = struct {
     pub const version_1_0 = Extension {
         .name = "VK_VERSION_1_0",
-        .commands &.{
+        .commands = &.{
             .create_instance,
             .destroy_instance,
             .enumerate_physical_devices,
@@ -29103,7 +29103,7 @@ pub const extension_commands = struct {
     };
     pub const version_1_1 = Extension {
         .name = "VK_VERSION_1_1",
-        .commands &.{
+        .commands = &.{
             .enumerate_instance_version,
             .bind_buffer_memory_2,
             .bind_image_memory_2,
@@ -29136,7 +29136,7 @@ pub const extension_commands = struct {
     };
     pub const version_1_2 = Extension {
         .name = "VK_VERSION_1_2",
-        .commands &.{
+        .commands = &.{
             .cmd_draw_indirect_count,
             .cmd_draw_indexed_indirect_count,
             .create_render_pass_2,
@@ -29154,7 +29154,7 @@ pub const extension_commands = struct {
     };
     pub const version_1_3 = Extension {
         .name = "VK_VERSION_1_3",
-        .commands &.{
+        .commands = &.{
             .get_physical_device_tool_properties,
             .create_private_data_slot,
             .destroy_private_data_slot,
@@ -29196,7 +29196,7 @@ pub const extension_commands = struct {
     };
     pub const version_1_4 = Extension {
         .name = "VK_VERSION_1_4",
-        .commands &.{
+        .commands = &.{
             .cmd_set_line_stipple,
             .map_memory_2,
             .unmap_memory_2,
@@ -29220,7 +29220,7 @@ pub const extension_commands = struct {
     };
     pub const khr_surface = Extension {
         .name = "VK_KHR_surface",
-        .commands &.{
+        .commands = &.{
             .khr_destroy_surface,
             .khr_get_physical_device_surface_support,
             .khr_get_physical_device_surface_capabilities,
@@ -29230,7 +29230,7 @@ pub const extension_commands = struct {
     };
     pub const khr_display = Extension {
         .name = "VK_KHR_display",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_display_properties,
             .khr_get_physical_device_display_plane_properties,
             .khr_get_display_plane_supported_displays,
@@ -29242,41 +29242,41 @@ pub const extension_commands = struct {
     };
     pub const khr_xlib_surface = Extension {
         .name = "VK_KHR_xlib_surface",
-        .commands &.{
+        .commands = &.{
             .khr_create_xlib_surface,
             .khr_get_physical_device_xlib_presentation_support,
         },
     };
     pub const khr_xcb_surface = Extension {
         .name = "VK_KHR_xcb_surface",
-        .commands &.{
+        .commands = &.{
             .khr_create_xcb_surface,
             .khr_get_physical_device_xcb_presentation_support,
         },
     };
     pub const khr_wayland_surface = Extension {
         .name = "VK_KHR_wayland_surface",
-        .commands &.{
+        .commands = &.{
             .khr_create_wayland_surface,
             .khr_get_physical_device_wayland_presentation_support,
         },
     };
     pub const khr_android_surface = Extension {
         .name = "VK_KHR_android_surface",
-        .commands &.{
+        .commands = &.{
             .khr_create_android_surface,
         },
     };
     pub const khr_win32_surface = Extension {
         .name = "VK_KHR_win32_surface",
-        .commands &.{
+        .commands = &.{
             .khr_create_win_32_surface,
             .khr_get_physical_device_win_32_presentation_support,
         },
     };
     pub const ext_debug_report = Extension {
         .name = "VK_EXT_debug_report",
-        .commands &.{
+        .commands = &.{
             .ext_create_debug_report_callback,
             .ext_destroy_debug_report_callback,
             .ext_debug_report_message,
@@ -29284,19 +29284,19 @@ pub const extension_commands = struct {
     };
     pub const ggp_stream_descriptor_surface = Extension {
         .name = "VK_GGP_stream_descriptor_surface",
-        .commands &.{
+        .commands = &.{
             .ggp_create_stream_descriptor_surface,
         },
     };
     pub const nv_external_memory_capabilities = Extension {
         .name = "VK_NV_external_memory_capabilities",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_external_image_format_properties,
         },
     };
     pub const khr_get_physical_device_properties2 = Extension {
         .name = "VK_KHR_get_physical_device_properties2",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_features_2,
             .khr_get_physical_device_properties_2,
             .khr_get_physical_device_format_properties_2,
@@ -29308,73 +29308,73 @@ pub const extension_commands = struct {
     };
     pub const ext_validation_flags = Extension {
         .name = "VK_EXT_validation_flags",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nn_vi_surface = Extension {
         .name = "VK_NN_vi_surface",
-        .commands &.{
+        .commands = &.{
             .nn_create_vi_surface,
         },
     };
     pub const khr_device_group_creation = Extension {
         .name = "VK_KHR_device_group_creation",
-        .commands &.{
+        .commands = &.{
             .khr_enumerate_physical_device_groups,
         },
     };
     pub const khr_external_memory_capabilities = Extension {
         .name = "VK_KHR_external_memory_capabilities",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_external_buffer_properties,
         },
     };
     pub const khr_external_semaphore_capabilities = Extension {
         .name = "VK_KHR_external_semaphore_capabilities",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_external_semaphore_properties,
         },
     };
     pub const ext_direct_mode_display = Extension {
         .name = "VK_EXT_direct_mode_display",
-        .commands &.{
+        .commands = &.{
             .ext_release_display,
         },
     };
     pub const ext_acquire_xlib_display = Extension {
         .name = "VK_EXT_acquire_xlib_display",
-        .commands &.{
+        .commands = &.{
             .ext_acquire_xlib_display,
             .ext_get_rand_r_output_display,
         },
     };
     pub const ext_display_surface_counter = Extension {
         .name = "VK_EXT_display_surface_counter",
-        .commands &.{
+        .commands = &.{
             .ext_get_physical_device_surface_capabilities_2,
         },
     };
     pub const ext_swapchain_colorspace = Extension {
         .name = "VK_EXT_swapchain_colorspace",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_external_fence_capabilities = Extension {
         .name = "VK_KHR_external_fence_capabilities",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_external_fence_properties,
         },
     };
     pub const khr_get_surface_capabilities2 = Extension {
         .name = "VK_KHR_get_surface_capabilities2",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_surface_capabilities_2,
             .khr_get_physical_device_surface_formats_2,
         },
     };
     pub const khr_get_display_properties2 = Extension {
         .name = "VK_KHR_get_display_properties2",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_display_properties_2,
             .khr_get_physical_device_display_plane_properties_2,
             .khr_get_display_mode_properties_2,
@@ -29383,19 +29383,19 @@ pub const extension_commands = struct {
     };
     pub const mvk_ios_surface = Extension {
         .name = "VK_MVK_ios_surface",
-        .commands &.{
+        .commands = &.{
             .mvk_create_ios_surface,
         },
     };
     pub const mvk_macos_surface = Extension {
         .name = "VK_MVK_macos_surface",
-        .commands &.{
+        .commands = &.{
             .mvk_create_mac_os_surface,
         },
     };
     pub const ext_debug_utils = Extension {
         .name = "VK_EXT_debug_utils",
-        .commands &.{
+        .commands = &.{
             .ext_set_debug_utils_object_name,
             .ext_set_debug_utils_object_tag,
             .ext_queue_begin_debug_utils_label,
@@ -29411,97 +29411,97 @@ pub const extension_commands = struct {
     };
     pub const fuchsia_imagepipe_surface = Extension {
         .name = "VK_FUCHSIA_imagepipe_surface",
-        .commands &.{
+        .commands = &.{
             .fuchsia_create_image_pipe_surface,
         },
     };
     pub const ext_metal_surface = Extension {
         .name = "VK_EXT_metal_surface",
-        .commands &.{
+        .commands = &.{
             .ext_create_metal_surface,
         },
     };
     pub const khr_surface_protected_capabilities = Extension {
         .name = "VK_KHR_surface_protected_capabilities",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_validation_features = Extension {
         .name = "VK_EXT_validation_features",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_headless_surface = Extension {
         .name = "VK_EXT_headless_surface",
-        .commands &.{
+        .commands = &.{
             .ext_create_headless_surface,
         },
     };
     pub const ext_surface_maintenance1 = Extension {
         .name = "VK_EXT_surface_maintenance1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_acquire_drm_display = Extension {
         .name = "VK_EXT_acquire_drm_display",
-        .commands &.{
+        .commands = &.{
             .ext_acquire_drm_display,
             .ext_get_drm_display,
         },
     };
     pub const ext_directfb_surface = Extension {
         .name = "VK_EXT_directfb_surface",
-        .commands &.{
+        .commands = &.{
             .ext_create_direct_fb_surface,
             .ext_get_physical_device_direct_fb_presentation_support,
         },
     };
     pub const qnx_screen_surface = Extension {
         .name = "VK_QNX_screen_surface",
-        .commands &.{
+        .commands = &.{
             .qnx_create_screen_surface,
             .qnx_get_physical_device_screen_presentation_support,
         },
     };
     pub const khr_portability_enumeration = Extension {
         .name = "VK_KHR_portability_enumeration",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const google_surfaceless_query = Extension {
         .name = "VK_GOOGLE_surfaceless_query",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const lunarg_direct_driver_loading = Extension {
         .name = "VK_LUNARG_direct_driver_loading",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_surface_maintenance1 = Extension {
         .name = "VK_KHR_surface_maintenance1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_layer_settings = Extension {
         .name = "VK_EXT_layer_settings",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_display_stereo = Extension {
         .name = "VK_NV_display_stereo",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ohos_surface = Extension {
         .name = "VK_OHOS_surface",
-        .commands &.{
+        .commands = &.{
             .ohos_create_surface,
         },
     };
     pub const khr_swapchain = Extension {
         .name = "VK_KHR_swapchain",
-        .commands &.{
+        .commands = &.{
             .khr_create_swapchain,
             .khr_destroy_swapchain,
             .khr_get_swapchain_images,
@@ -29515,48 +29515,48 @@ pub const extension_commands = struct {
     };
     pub const khr_display_swapchain = Extension {
         .name = "VK_KHR_display_swapchain",
-        .commands &.{
+        .commands = &.{
             .khr_create_shared_swapchains,
         },
     };
     pub const nv_glsl_shader = Extension {
         .name = "VK_NV_glsl_shader",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_depth_range_unrestricted = Extension {
         .name = "VK_EXT_depth_range_unrestricted",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_sampler_mirror_clamp_to_edge = Extension {
         .name = "VK_KHR_sampler_mirror_clamp_to_edge",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const img_filter_cubic = Extension {
         .name = "VK_IMG_filter_cubic",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_rasterization_order = Extension {
         .name = "VK_AMD_rasterization_order",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_trinary_minmax = Extension {
         .name = "VK_AMD_shader_trinary_minmax",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_explicit_vertex_parameter = Extension {
         .name = "VK_AMD_shader_explicit_vertex_parameter",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_debug_marker = Extension {
         .name = "VK_EXT_debug_marker",
-        .commands &.{
+        .commands = &.{
             .ext_debug_marker_set_object_tag,
             .ext_debug_marker_set_object_name,
             .ext_cmd_debug_marker_begin,
@@ -29566,7 +29566,7 @@ pub const extension_commands = struct {
     };
     pub const khr_video_queue = Extension {
         .name = "VK_KHR_video_queue",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_video_capabilities,
             .khr_get_physical_device_video_format_properties,
             .khr_create_video_session,
@@ -29583,23 +29583,23 @@ pub const extension_commands = struct {
     };
     pub const khr_video_decode_queue = Extension {
         .name = "VK_KHR_video_decode_queue",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_decode_video,
         },
     };
     pub const amd_gcn_shader = Extension {
         .name = "VK_AMD_gcn_shader",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_dedicated_allocation = Extension {
         .name = "VK_NV_dedicated_allocation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_transform_feedback = Extension {
         .name = "VK_EXT_transform_feedback",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_bind_transform_feedback_buffers,
             .ext_cmd_begin_transform_feedback,
             .ext_cmd_end_transform_feedback,
@@ -29610,7 +29610,7 @@ pub const extension_commands = struct {
     };
     pub const nvx_binary_import = Extension {
         .name = "VK_NVX_binary_import",
-        .commands &.{
+        .commands = &.{
             .nvx_create_cu_module,
             .nvx_create_cu_function,
             .nvx_destroy_cu_module,
@@ -29620,7 +29620,7 @@ pub const extension_commands = struct {
     };
     pub const nvx_image_view_handle = Extension {
         .name = "VK_NVX_image_view_handle",
-        .commands &.{
+        .commands = &.{
             .nvx_get_image_view_handle,
             .nvx_get_image_view_handle_64,
             .nvx_get_image_view_address,
@@ -29628,98 +29628,98 @@ pub const extension_commands = struct {
     };
     pub const amd_draw_indirect_count = Extension {
         .name = "VK_AMD_draw_indirect_count",
-        .commands &.{
+        .commands = &.{
             .amd_cmd_draw_indirect_count,
             .amd_cmd_draw_indexed_indirect_count,
         },
     };
     pub const amd_negative_viewport_height = Extension {
         .name = "VK_AMD_negative_viewport_height",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_gpu_shader_half_float = Extension {
         .name = "VK_AMD_gpu_shader_half_float",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_ballot = Extension {
         .name = "VK_AMD_shader_ballot",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_encode_h264 = Extension {
         .name = "VK_KHR_video_encode_h264",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_encode_h265 = Extension {
         .name = "VK_KHR_video_encode_h265",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_decode_h264 = Extension {
         .name = "VK_KHR_video_decode_h264",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_texture_gather_bias_lod = Extension {
         .name = "VK_AMD_texture_gather_bias_lod",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_info = Extension {
         .name = "VK_AMD_shader_info",
-        .commands &.{
+        .commands = &.{
             .amd_get_shader_info,
         },
     };
     pub const khr_dynamic_rendering = Extension {
         .name = "VK_KHR_dynamic_rendering",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_begin_rendering,
             .khr_cmd_end_rendering,
         },
     };
     pub const amd_shader_image_load_store_lod = Extension {
         .name = "VK_AMD_shader_image_load_store_lod",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_corner_sampled_image = Extension {
         .name = "VK_NV_corner_sampled_image",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_multiview = Extension {
         .name = "VK_KHR_multiview",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const img_format_pvrtc = Extension {
         .name = "VK_IMG_format_pvrtc",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_external_memory = Extension {
         .name = "VK_NV_external_memory",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_external_memory_win32 = Extension {
         .name = "VK_NV_external_memory_win32",
-        .commands &.{
+        .commands = &.{
             .nv_get_memory_win_32_handle,
         },
     };
     pub const nv_win32_keyed_mutex = Extension {
         .name = "VK_NV_win32_keyed_mutex",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_device_group = Extension {
         .name = "VK_KHR_device_group",
-        .commands &.{
+        .commands = &.{
             .khr_get_device_group_peer_memory_features,
             .khr_cmd_set_device_mask,
             .khr_cmd_dispatch_base,
@@ -29731,115 +29731,115 @@ pub const extension_commands = struct {
     };
     pub const khr_shader_draw_parameters = Extension {
         .name = "VK_KHR_shader_draw_parameters",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_subgroup_ballot = Extension {
         .name = "VK_EXT_shader_subgroup_ballot",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_subgroup_vote = Extension {
         .name = "VK_EXT_shader_subgroup_vote",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_texture_compression_astc_hdr = Extension {
         .name = "VK_EXT_texture_compression_astc_hdr",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_astc_decode_mode = Extension {
         .name = "VK_EXT_astc_decode_mode",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pipeline_robustness = Extension {
         .name = "VK_EXT_pipeline_robustness",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_maintenance1 = Extension {
         .name = "VK_KHR_maintenance1",
-        .commands &.{
+        .commands = &.{
             .khr_trim_command_pool,
         },
     };
     pub const khr_external_memory = Extension {
         .name = "VK_KHR_external_memory",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_external_memory_win32 = Extension {
         .name = "VK_KHR_external_memory_win32",
-        .commands &.{
+        .commands = &.{
             .khr_get_memory_win_32_handle,
             .khr_get_memory_win_32_handle_properties,
         },
     };
     pub const khr_external_memory_fd = Extension {
         .name = "VK_KHR_external_memory_fd",
-        .commands &.{
+        .commands = &.{
             .khr_get_memory_fd,
             .khr_get_memory_fd_properties,
         },
     };
     pub const khr_win32_keyed_mutex = Extension {
         .name = "VK_KHR_win32_keyed_mutex",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_external_semaphore = Extension {
         .name = "VK_KHR_external_semaphore",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_external_semaphore_win32 = Extension {
         .name = "VK_KHR_external_semaphore_win32",
-        .commands &.{
+        .commands = &.{
             .khr_import_semaphore_win_32_handle,
             .khr_get_semaphore_win_32_handle,
         },
     };
     pub const khr_external_semaphore_fd = Extension {
         .name = "VK_KHR_external_semaphore_fd",
-        .commands &.{
+        .commands = &.{
             .khr_import_semaphore_fd,
             .khr_get_semaphore_fd,
         },
     };
     pub const khr_push_descriptor = Extension {
         .name = "VK_KHR_push_descriptor",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_push_descriptor_set,
             .khr_cmd_push_descriptor_set_with_template,
         },
     };
     pub const ext_conditional_rendering = Extension {
         .name = "VK_EXT_conditional_rendering",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_begin_conditional_rendering,
             .ext_cmd_end_conditional_rendering,
         },
     };
     pub const khr_shader_float16_int8 = Extension {
         .name = "VK_KHR_shader_float16_int8",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_16bit_storage = Extension {
         .name = "VK_KHR_16bit_storage",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_incremental_present = Extension {
         .name = "VK_KHR_incremental_present",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_descriptor_update_template = Extension {
         .name = "VK_KHR_descriptor_update_template",
-        .commands &.{
+        .commands = &.{
             .khr_create_descriptor_update_template,
             .khr_destroy_descriptor_update_template,
             .khr_update_descriptor_set_with_template,
@@ -29848,13 +29848,13 @@ pub const extension_commands = struct {
     };
     pub const nv_clip_space_w_scaling = Extension {
         .name = "VK_NV_clip_space_w_scaling",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_set_viewport_w_scaling,
         },
     };
     pub const ext_display_control = Extension {
         .name = "VK_EXT_display_control",
-        .commands &.{
+        .commands = &.{
             .ext_display_power_control,
             .ext_register_device_event,
             .ext_register_display_event,
@@ -29863,39 +29863,39 @@ pub const extension_commands = struct {
     };
     pub const google_display_timing = Extension {
         .name = "VK_GOOGLE_display_timing",
-        .commands &.{
+        .commands = &.{
             .google_get_refresh_cycle_duration,
             .google_get_past_presentation_timing,
         },
     };
     pub const nv_sample_mask_override_coverage = Extension {
         .name = "VK_NV_sample_mask_override_coverage",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_geometry_shader_passthrough = Extension {
         .name = "VK_NV_geometry_shader_passthrough",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_viewport_array2 = Extension {
         .name = "VK_NV_viewport_array2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nvx_multiview_per_view_attributes = Extension {
         .name = "VK_NVX_multiview_per_view_attributes",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_viewport_swizzle = Extension {
         .name = "VK_NV_viewport_swizzle",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_discard_rectangles = Extension {
         .name = "VK_EXT_discard_rectangles",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_discard_rectangle,
             .ext_cmd_set_discard_rectangle_enable,
             .ext_cmd_set_discard_rectangle_mode,
@@ -29903,28 +29903,28 @@ pub const extension_commands = struct {
     };
     pub const ext_conservative_rasterization = Extension {
         .name = "VK_EXT_conservative_rasterization",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_depth_clip_enable = Extension {
         .name = "VK_EXT_depth_clip_enable",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_hdr_metadata = Extension {
         .name = "VK_EXT_hdr_metadata",
-        .commands &.{
+        .commands = &.{
             .ext_set_hdr_metadata,
         },
     };
     pub const khr_imageless_framebuffer = Extension {
         .name = "VK_KHR_imageless_framebuffer",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_create_renderpass2 = Extension {
         .name = "VK_KHR_create_renderpass2",
-        .commands &.{
+        .commands = &.{
             .khr_create_render_pass_2,
             .khr_cmd_begin_render_pass_2,
             .khr_cmd_next_subpass_2,
@@ -29933,37 +29933,37 @@ pub const extension_commands = struct {
     };
     pub const img_relaxed_line_rasterization = Extension {
         .name = "VK_IMG_relaxed_line_rasterization",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shared_presentable_image = Extension {
         .name = "VK_KHR_shared_presentable_image",
-        .commands &.{
+        .commands = &.{
             .khr_get_swapchain_status,
         },
     };
     pub const khr_external_fence = Extension {
         .name = "VK_KHR_external_fence",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_external_fence_win32 = Extension {
         .name = "VK_KHR_external_fence_win32",
-        .commands &.{
+        .commands = &.{
             .khr_import_fence_win_32_handle,
             .khr_get_fence_win_32_handle,
         },
     };
     pub const khr_external_fence_fd = Extension {
         .name = "VK_KHR_external_fence_fd",
-        .commands &.{
+        .commands = &.{
             .khr_import_fence_fd,
             .khr_get_fence_fd,
         },
     };
     pub const khr_performance_query = Extension {
         .name = "VK_KHR_performance_query",
-        .commands &.{
+        .commands = &.{
             .khr_enumerate_physical_device_queue_family_performance_query_counters,
             .khr_get_physical_device_queue_family_performance_query_passes,
             .khr_acquire_profiling_lock,
@@ -29972,54 +29972,54 @@ pub const extension_commands = struct {
     };
     pub const khr_maintenance2 = Extension {
         .name = "VK_KHR_maintenance2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_variable_pointers = Extension {
         .name = "VK_KHR_variable_pointers",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_external_memory_dma_buf = Extension {
         .name = "VK_EXT_external_memory_dma_buf",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_queue_family_foreign = Extension {
         .name = "VK_EXT_queue_family_foreign",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_dedicated_allocation = Extension {
         .name = "VK_KHR_dedicated_allocation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const android_external_memory_android_hardware_buffer = Extension {
         .name = "VK_ANDROID_external_memory_android_hardware_buffer",
-        .commands &.{
+        .commands = &.{
             .android_get_android_hardware_buffer_properties,
             .android_get_memory_android_hardware_buffer,
         },
     };
     pub const ext_sampler_filter_minmax = Extension {
         .name = "VK_EXT_sampler_filter_minmax",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_storage_buffer_storage_class = Extension {
         .name = "VK_KHR_storage_buffer_storage_class",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_gpu_shader_int16 = Extension {
         .name = "VK_AMD_gpu_shader_int16",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amdx_shader_enqueue = Extension {
         .name = "VK_AMDX_shader_enqueue",
-        .commands &.{
+        .commands = &.{
             .amdx_create_execution_graph_pipelines,
             .amdx_get_execution_graph_pipeline_scratch_size,
             .amdx_get_execution_graph_pipeline_node_index,
@@ -30031,44 +30031,44 @@ pub const extension_commands = struct {
     };
     pub const amd_mixed_attachment_samples = Extension {
         .name = "VK_AMD_mixed_attachment_samples",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_fragment_mask = Extension {
         .name = "VK_AMD_shader_fragment_mask",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_inline_uniform_block = Extension {
         .name = "VK_EXT_inline_uniform_block",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_stencil_export = Extension {
         .name = "VK_EXT_shader_stencil_export",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_bfloat16 = Extension {
         .name = "VK_KHR_shader_bfloat16",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_sample_locations = Extension {
         .name = "VK_EXT_sample_locations",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_sample_locations,
             .ext_get_physical_device_multisample_properties,
         },
     };
     pub const khr_relaxed_block_layout = Extension {
         .name = "VK_KHR_relaxed_block_layout",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_get_memory_requirements2 = Extension {
         .name = "VK_KHR_get_memory_requirements2",
-        .commands &.{
+        .commands = &.{
             .khr_get_image_memory_requirements_2,
             .khr_get_buffer_memory_requirements_2,
             .khr_get_image_sparse_memory_requirements_2,
@@ -30076,22 +30076,22 @@ pub const extension_commands = struct {
     };
     pub const khr_image_format_list = Extension {
         .name = "VK_KHR_image_format_list",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_blend_operation_advanced = Extension {
         .name = "VK_EXT_blend_operation_advanced",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_fragment_coverage_to_color = Extension {
         .name = "VK_NV_fragment_coverage_to_color",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_acceleration_structure = Extension {
         .name = "VK_KHR_acceleration_structure",
-        .commands &.{
+        .commands = &.{
             .khr_create_acceleration_structure,
             .khr_destroy_acceleration_structure,
             .khr_cmd_build_acceleration_structures,
@@ -30112,7 +30112,7 @@ pub const extension_commands = struct {
     };
     pub const khr_ray_tracing_pipeline = Extension {
         .name = "VK_KHR_ray_tracing_pipeline",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_trace_rays,
             .khr_create_ray_tracing_pipelines,
             .khr_get_ray_tracing_shader_group_handles,
@@ -30124,52 +30124,52 @@ pub const extension_commands = struct {
     };
     pub const khr_ray_query = Extension {
         .name = "VK_KHR_ray_query",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_framebuffer_mixed_samples = Extension {
         .name = "VK_NV_framebuffer_mixed_samples",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_fill_rectangle = Extension {
         .name = "VK_NV_fill_rectangle",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_shader_sm_builtins = Extension {
         .name = "VK_NV_shader_sm_builtins",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_post_depth_coverage = Extension {
         .name = "VK_EXT_post_depth_coverage",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_sampler_ycbcr_conversion = Extension {
         .name = "VK_KHR_sampler_ycbcr_conversion",
-        .commands &.{
+        .commands = &.{
             .khr_create_sampler_ycbcr_conversion,
             .khr_destroy_sampler_ycbcr_conversion,
         },
     };
     pub const khr_bind_memory2 = Extension {
         .name = "VK_KHR_bind_memory2",
-        .commands &.{
+        .commands = &.{
             .khr_bind_buffer_memory_2,
             .khr_bind_image_memory_2,
         },
     };
     pub const ext_image_drm_format_modifier = Extension {
         .name = "VK_EXT_image_drm_format_modifier",
-        .commands &.{
+        .commands = &.{
             .ext_get_image_drm_format_modifier_properties,
         },
     };
     pub const ext_validation_cache = Extension {
         .name = "VK_EXT_validation_cache",
-        .commands &.{
+        .commands = &.{
             .ext_create_validation_cache,
             .ext_destroy_validation_cache,
             .ext_merge_validation_caches,
@@ -30178,22 +30178,22 @@ pub const extension_commands = struct {
     };
     pub const ext_descriptor_indexing = Extension {
         .name = "VK_EXT_descriptor_indexing",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_viewport_index_layer = Extension {
         .name = "VK_EXT_shader_viewport_index_layer",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_portability_subset = Extension {
         .name = "VK_KHR_portability_subset",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_shading_rate_image = Extension {
         .name = "VK_NV_shading_rate_image",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_bind_shading_rate_image,
             .nv_cmd_set_viewport_shading_rate_palette,
             .nv_cmd_set_coarse_sample_order,
@@ -30201,7 +30201,7 @@ pub const extension_commands = struct {
     };
     pub const nv_ray_tracing = Extension {
         .name = "VK_NV_ray_tracing",
-        .commands &.{
+        .commands = &.{
             .nv_create_acceleration_structure,
             .nv_destroy_acceleration_structure,
             .nv_get_acceleration_structure_memory_requirements,
@@ -30218,150 +30218,150 @@ pub const extension_commands = struct {
     };
     pub const nv_representative_fragment_test = Extension {
         .name = "VK_NV_representative_fragment_test",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_maintenance3 = Extension {
         .name = "VK_KHR_maintenance3",
-        .commands &.{
+        .commands = &.{
             .khr_get_descriptor_set_layout_support,
         },
     };
     pub const khr_draw_indirect_count = Extension {
         .name = "VK_KHR_draw_indirect_count",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_draw_indirect_count,
             .khr_cmd_draw_indexed_indirect_count,
         },
     };
     pub const ext_filter_cubic = Extension {
         .name = "VK_EXT_filter_cubic",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_render_pass_shader_resolve = Extension {
         .name = "VK_QCOM_render_pass_shader_resolve",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_global_priority = Extension {
         .name = "VK_EXT_global_priority",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_subgroup_extended_types = Extension {
         .name = "VK_KHR_shader_subgroup_extended_types",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_8bit_storage = Extension {
         .name = "VK_KHR_8bit_storage",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_external_memory_host = Extension {
         .name = "VK_EXT_external_memory_host",
-        .commands &.{
+        .commands = &.{
             .ext_get_memory_host_pointer_properties,
         },
     };
     pub const amd_buffer_marker = Extension {
         .name = "VK_AMD_buffer_marker",
-        .commands &.{
+        .commands = &.{
             .amd_cmd_write_buffer_marker,
             .amd_cmd_write_buffer_marker_2,
         },
     };
     pub const khr_shader_atomic_int64 = Extension {
         .name = "VK_KHR_shader_atomic_int64",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_clock = Extension {
         .name = "VK_KHR_shader_clock",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_pipeline_compiler_control = Extension {
         .name = "VK_AMD_pipeline_compiler_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_calibrated_timestamps = Extension {
         .name = "VK_EXT_calibrated_timestamps",
-        .commands &.{
+        .commands = &.{
             .ext_get_physical_device_calibrateable_time_domains,
             .ext_get_calibrated_timestamps,
         },
     };
     pub const amd_shader_core_properties = Extension {
         .name = "VK_AMD_shader_core_properties",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_decode_h265 = Extension {
         .name = "VK_KHR_video_decode_h265",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_global_priority = Extension {
         .name = "VK_KHR_global_priority",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_memory_overallocation_behavior = Extension {
         .name = "VK_AMD_memory_overallocation_behavior",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_vertex_attribute_divisor = Extension {
         .name = "VK_EXT_vertex_attribute_divisor",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ggp_frame_token = Extension {
         .name = "VK_GGP_frame_token",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pipeline_creation_feedback = Extension {
         .name = "VK_EXT_pipeline_creation_feedback",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_driver_properties = Extension {
         .name = "VK_KHR_driver_properties",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_float_controls = Extension {
         .name = "VK_KHR_shader_float_controls",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_shader_subgroup_partitioned = Extension {
         .name = "VK_NV_shader_subgroup_partitioned",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_depth_stencil_resolve = Extension {
         .name = "VK_KHR_depth_stencil_resolve",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_swapchain_mutable_format = Extension {
         .name = "VK_KHR_swapchain_mutable_format",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_compute_shader_derivatives = Extension {
         .name = "VK_NV_compute_shader_derivatives",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_mesh_shader = Extension {
         .name = "VK_NV_mesh_shader",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_draw_mesh_tasks,
             .nv_cmd_draw_mesh_tasks_indirect,
             .nv_cmd_draw_mesh_tasks_indirect_count,
@@ -30369,24 +30369,24 @@ pub const extension_commands = struct {
     };
     pub const nv_fragment_shader_barycentric = Extension {
         .name = "VK_NV_fragment_shader_barycentric",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_shader_image_footprint = Extension {
         .name = "VK_NV_shader_image_footprint",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_scissor_exclusive = Extension {
         .name = "VK_NV_scissor_exclusive",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_set_exclusive_scissor_enable,
             .nv_cmd_set_exclusive_scissor,
         },
     };
     pub const nv_device_diagnostic_checkpoints = Extension {
         .name = "VK_NV_device_diagnostic_checkpoints",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_set_checkpoint,
             .nv_get_queue_checkpoint_data,
             .nv_get_queue_checkpoint_data_2,
@@ -30394,7 +30394,7 @@ pub const extension_commands = struct {
     };
     pub const khr_timeline_semaphore = Extension {
         .name = "VK_KHR_timeline_semaphore",
-        .commands &.{
+        .commands = &.{
             .khr_get_semaphore_counter_value,
             .khr_wait_semaphores,
             .khr_signal_semaphore,
@@ -30402,12 +30402,12 @@ pub const extension_commands = struct {
     };
     pub const intel_shader_integer_functions2 = Extension {
         .name = "VK_INTEL_shader_integer_functions2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const intel_performance_query = Extension {
         .name = "VK_INTEL_performance_query",
-        .commands &.{
+        .commands = &.{
             .intel_initialize_performance_api,
             .intel_uninitialize_performance_api,
             .intel_cmd_set_performance_marker,
@@ -30421,167 +30421,167 @@ pub const extension_commands = struct {
     };
     pub const khr_vulkan_memory_model = Extension {
         .name = "VK_KHR_vulkan_memory_model",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pci_bus_info = Extension {
         .name = "VK_EXT_pci_bus_info",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_display_native_hdr = Extension {
         .name = "VK_AMD_display_native_hdr",
-        .commands &.{
+        .commands = &.{
             .amd_set_local_dimming,
         },
     };
     pub const khr_shader_terminate_invocation = Extension {
         .name = "VK_KHR_shader_terminate_invocation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_fragment_density_map = Extension {
         .name = "VK_EXT_fragment_density_map",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_scalar_block_layout = Extension {
         .name = "VK_EXT_scalar_block_layout",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const google_hlsl_functionality1 = Extension {
         .name = "VK_GOOGLE_hlsl_functionality1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const google_decorate_string = Extension {
         .name = "VK_GOOGLE_decorate_string",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_subgroup_size_control = Extension {
         .name = "VK_EXT_subgroup_size_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_fragment_shading_rate = Extension {
         .name = "VK_KHR_fragment_shading_rate",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_fragment_shading_rates,
             .khr_cmd_set_fragment_shading_rate,
         },
     };
     pub const amd_shader_core_properties2 = Extension {
         .name = "VK_AMD_shader_core_properties2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_device_coherent_memory = Extension {
         .name = "VK_AMD_device_coherent_memory",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_dynamic_rendering_local_read = Extension {
         .name = "VK_KHR_dynamic_rendering_local_read",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_set_rendering_attachment_locations,
             .khr_cmd_set_rendering_input_attachment_indices,
         },
     };
     pub const ext_shader_image_atomic_int64 = Extension {
         .name = "VK_EXT_shader_image_atomic_int64",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_quad_control = Extension {
         .name = "VK_KHR_shader_quad_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_spirv_1_4 = Extension {
         .name = "VK_KHR_spirv_1_4",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_memory_budget = Extension {
         .name = "VK_EXT_memory_budget",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_memory_priority = Extension {
         .name = "VK_EXT_memory_priority",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_dedicated_allocation_image_aliasing = Extension {
         .name = "VK_NV_dedicated_allocation_image_aliasing",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_separate_depth_stencil_layouts = Extension {
         .name = "VK_KHR_separate_depth_stencil_layouts",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_buffer_device_address = Extension {
         .name = "VK_EXT_buffer_device_address",
-        .commands &.{
+        .commands = &.{
             .ext_get_buffer_device_address,
         },
     };
     pub const ext_tooling_info = Extension {
         .name = "VK_EXT_tooling_info",
-        .commands &.{
+        .commands = &.{
             .ext_get_physical_device_tool_properties,
         },
     };
     pub const ext_separate_stencil_usage = Extension {
         .name = "VK_EXT_separate_stencil_usage",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_present_wait = Extension {
         .name = "VK_KHR_present_wait",
-        .commands &.{
+        .commands = &.{
             .khr_wait_for_present,
         },
     };
     pub const nv_cooperative_matrix = Extension {
         .name = "VK_NV_cooperative_matrix",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_cooperative_matrix_properties,
         },
     };
     pub const nv_coverage_reduction_mode = Extension {
         .name = "VK_NV_coverage_reduction_mode",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_supported_framebuffer_mixed_samples_combinations,
         },
     };
     pub const ext_fragment_shader_interlock = Extension {
         .name = "VK_EXT_fragment_shader_interlock",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_ycbcr_image_arrays = Extension {
         .name = "VK_EXT_ycbcr_image_arrays",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_uniform_buffer_standard_layout = Extension {
         .name = "VK_KHR_uniform_buffer_standard_layout",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_provoking_vertex = Extension {
         .name = "VK_EXT_provoking_vertex",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_full_screen_exclusive = Extension {
         .name = "VK_EXT_full_screen_exclusive",
-        .commands &.{
+        .commands = &.{
             .ext_get_physical_device_surface_present_modes_2,
             .ext_acquire_full_screen_exclusive_mode,
             .ext_release_full_screen_exclusive_mode,
@@ -30590,7 +30590,7 @@ pub const extension_commands = struct {
     };
     pub const khr_buffer_device_address = Extension {
         .name = "VK_KHR_buffer_device_address",
-        .commands &.{
+        .commands = &.{
             .khr_get_buffer_device_address,
             .khr_get_buffer_opaque_capture_address,
             .khr_get_device_memory_opaque_capture_address,
@@ -30598,29 +30598,29 @@ pub const extension_commands = struct {
     };
     pub const ext_line_rasterization = Extension {
         .name = "VK_EXT_line_rasterization",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_line_stipple,
         },
     };
     pub const ext_shader_atomic_float = Extension {
         .name = "VK_EXT_shader_atomic_float",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_host_query_reset = Extension {
         .name = "VK_EXT_host_query_reset",
-        .commands &.{
+        .commands = &.{
             .ext_reset_query_pool,
         },
     };
     pub const ext_index_type_uint8 = Extension {
         .name = "VK_EXT_index_type_uint8",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_extended_dynamic_state = Extension {
         .name = "VK_EXT_extended_dynamic_state",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_cull_mode,
             .ext_cmd_set_front_face,
             .ext_cmd_set_primitive_topology,
@@ -30637,7 +30637,7 @@ pub const extension_commands = struct {
     };
     pub const khr_deferred_host_operations = Extension {
         .name = "VK_KHR_deferred_host_operations",
-        .commands &.{
+        .commands = &.{
             .khr_create_deferred_operation,
             .khr_destroy_deferred_operation,
             .khr_get_deferred_operation_max_concurrency,
@@ -30647,7 +30647,7 @@ pub const extension_commands = struct {
     };
     pub const khr_pipeline_executable_properties = Extension {
         .name = "VK_KHR_pipeline_executable_properties",
-        .commands &.{
+        .commands = &.{
             .khr_get_pipeline_executable_properties,
             .khr_get_pipeline_executable_statistics,
             .khr_get_pipeline_executable_internal_representations,
@@ -30655,7 +30655,7 @@ pub const extension_commands = struct {
     };
     pub const ext_host_image_copy = Extension {
         .name = "VK_EXT_host_image_copy",
-        .commands &.{
+        .commands = &.{
             .ext_copy_memory_to_image,
             .ext_copy_image_to_memory,
             .ext_copy_image_to_image,
@@ -30665,35 +30665,35 @@ pub const extension_commands = struct {
     };
     pub const khr_map_memory2 = Extension {
         .name = "VK_KHR_map_memory2",
-        .commands &.{
+        .commands = &.{
             .khr_map_memory_2,
             .khr_unmap_memory_2,
         },
     };
     pub const ext_map_memory_placed = Extension {
         .name = "VK_EXT_map_memory_placed",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_atomic_float2 = Extension {
         .name = "VK_EXT_shader_atomic_float2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_swapchain_maintenance1 = Extension {
         .name = "VK_EXT_swapchain_maintenance1",
-        .commands &.{
+        .commands = &.{
             .ext_release_swapchain_images,
         },
     };
     pub const ext_shader_demote_to_helper_invocation = Extension {
         .name = "VK_EXT_shader_demote_to_helper_invocation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_device_generated_commands = Extension {
         .name = "VK_NV_device_generated_commands",
-        .commands &.{
+        .commands = &.{
             .nv_get_generated_commands_memory_requirements,
             .nv_cmd_preprocess_generated_commands,
             .nv_cmd_execute_generated_commands,
@@ -30704,73 +30704,73 @@ pub const extension_commands = struct {
     };
     pub const nv_inherited_viewport_scissor = Extension {
         .name = "VK_NV_inherited_viewport_scissor",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_integer_dot_product = Extension {
         .name = "VK_KHR_shader_integer_dot_product",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_texel_buffer_alignment = Extension {
         .name = "VK_EXT_texel_buffer_alignment",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_render_pass_transform = Extension {
         .name = "VK_QCOM_render_pass_transform",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_depth_bias_control = Extension {
         .name = "VK_EXT_depth_bias_control",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_depth_bias_2,
         },
     };
     pub const ext_device_memory_report = Extension {
         .name = "VK_EXT_device_memory_report",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_robustness2 = Extension {
         .name = "VK_EXT_robustness2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_custom_border_color = Extension {
         .name = "VK_EXT_custom_border_color",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const google_user_type = Extension {
         .name = "VK_GOOGLE_user_type",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_pipeline_library = Extension {
         .name = "VK_KHR_pipeline_library",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_present_barrier = Extension {
         .name = "VK_NV_present_barrier",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_non_semantic_info = Extension {
         .name = "VK_KHR_shader_non_semantic_info",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_present_id = Extension {
         .name = "VK_KHR_present_id",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_private_data = Extension {
         .name = "VK_EXT_private_data",
-        .commands &.{
+        .commands = &.{
             .ext_create_private_data_slot,
             .ext_destroy_private_data_slot,
             .ext_set_private_data,
@@ -30779,12 +30779,12 @@ pub const extension_commands = struct {
     };
     pub const ext_pipeline_creation_cache_control = Extension {
         .name = "VK_EXT_pipeline_creation_cache_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_encode_queue = Extension {
         .name = "VK_KHR_video_encode_queue",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_video_encode_quality_level_properties,
             .khr_get_encoded_video_session_parameters,
             .khr_cmd_encode_video,
@@ -30792,17 +30792,17 @@ pub const extension_commands = struct {
     };
     pub const nv_device_diagnostics_config = Extension {
         .name = "VK_NV_device_diagnostics_config",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_render_pass_store_ops = Extension {
         .name = "VK_QCOM_render_pass_store_ops",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_cuda_kernel_launch = Extension {
         .name = "VK_NV_cuda_kernel_launch",
-        .commands &.{
+        .commands = &.{
             .nv_create_cuda_module,
             .nv_get_cuda_module_cache,
             .nv_create_cuda_function,
@@ -30813,7 +30813,7 @@ pub const extension_commands = struct {
     };
     pub const qcom_tile_shading = Extension {
         .name = "VK_QCOM_tile_shading",
-        .commands &.{
+        .commands = &.{
             .qcom_cmd_dispatch_tile,
             .qcom_cmd_begin_per_tile_execution,
             .qcom_cmd_end_per_tile_execution,
@@ -30821,18 +30821,18 @@ pub const extension_commands = struct {
     };
     pub const nv_low_latency = Extension {
         .name = "VK_NV_low_latency",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_metal_objects = Extension {
         .name = "VK_EXT_metal_objects",
-        .commands &.{
+        .commands = &.{
             .ext_export_metal_objects,
         },
     };
     pub const khr_synchronization2 = Extension {
         .name = "VK_KHR_synchronization2",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_set_event_2,
             .khr_cmd_reset_event_2,
             .khr_cmd_wait_events_2,
@@ -30843,7 +30843,7 @@ pub const extension_commands = struct {
     };
     pub const ext_descriptor_buffer = Extension {
         .name = "VK_EXT_descriptor_buffer",
-        .commands &.{
+        .commands = &.{
             .ext_get_descriptor_set_layout_size,
             .ext_get_descriptor_set_layout_binding_offset,
             .ext_get_descriptor,
@@ -30859,43 +30859,43 @@ pub const extension_commands = struct {
     };
     pub const ext_graphics_pipeline_library = Extension {
         .name = "VK_EXT_graphics_pipeline_library",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const amd_shader_early_and_late_fragment_tests = Extension {
         .name = "VK_AMD_shader_early_and_late_fragment_tests",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_fragment_shader_barycentric = Extension {
         .name = "VK_KHR_fragment_shader_barycentric",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_subgroup_uniform_control_flow = Extension {
         .name = "VK_KHR_shader_subgroup_uniform_control_flow",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_zero_initialize_workgroup_memory = Extension {
         .name = "VK_KHR_zero_initialize_workgroup_memory",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_fragment_shading_rate_enums = Extension {
         .name = "VK_NV_fragment_shading_rate_enums",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_set_fragment_shading_rate_enum,
         },
     };
     pub const nv_ray_tracing_motion_blur = Extension {
         .name = "VK_NV_ray_tracing_motion_blur",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_mesh_shader = Extension {
         .name = "VK_EXT_mesh_shader",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_draw_mesh_tasks,
             .ext_cmd_draw_mesh_tasks_indirect,
             .ext_cmd_draw_mesh_tasks_indirect_count,
@@ -30903,32 +30903,32 @@ pub const extension_commands = struct {
     };
     pub const ext_ycbcr_2plane_444_formats = Extension {
         .name = "VK_EXT_ycbcr_2plane_444_formats",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_fragment_density_map2 = Extension {
         .name = "VK_EXT_fragment_density_map2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_rotated_copy_commands = Extension {
         .name = "VK_QCOM_rotated_copy_commands",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_image_robustness = Extension {
         .name = "VK_EXT_image_robustness",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_workgroup_memory_explicit_layout = Extension {
         .name = "VK_KHR_workgroup_memory_explicit_layout",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_copy_commands2 = Extension {
         .name = "VK_KHR_copy_commands2",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_copy_buffer_2,
             .khr_cmd_copy_image_2,
             .khr_cmd_copy_buffer_to_image_2,
@@ -30939,101 +30939,101 @@ pub const extension_commands = struct {
     };
     pub const ext_image_compression_control = Extension {
         .name = "VK_EXT_image_compression_control",
-        .commands &.{
+        .commands = &.{
             .ext_get_image_subresource_layout_2,
         },
     };
     pub const ext_attachment_feedback_loop_layout = Extension {
         .name = "VK_EXT_attachment_feedback_loop_layout",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_4444_formats = Extension {
         .name = "VK_EXT_4444_formats",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_device_fault = Extension {
         .name = "VK_EXT_device_fault",
-        .commands &.{
+        .commands = &.{
             .ext_get_device_fault_info,
         },
     };
     pub const arm_rasterization_order_attachment_access = Extension {
         .name = "VK_ARM_rasterization_order_attachment_access",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_rgba10x6_formats = Extension {
         .name = "VK_EXT_rgba10x6_formats",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_acquire_winrt_display = Extension {
         .name = "VK_NV_acquire_winrt_display",
-        .commands &.{
+        .commands = &.{
             .nv_acquire_winrt_display,
             .nv_get_winrt_display,
         },
     };
     pub const valve_mutable_descriptor_type = Extension {
         .name = "VK_VALVE_mutable_descriptor_type",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_vertex_input_dynamic_state = Extension {
         .name = "VK_EXT_vertex_input_dynamic_state",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_vertex_input,
         },
     };
     pub const ext_physical_device_drm = Extension {
         .name = "VK_EXT_physical_device_drm",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_device_address_binding_report = Extension {
         .name = "VK_EXT_device_address_binding_report",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_depth_clip_control = Extension {
         .name = "VK_EXT_depth_clip_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_primitive_topology_list_restart = Extension {
         .name = "VK_EXT_primitive_topology_list_restart",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_format_feature_flags2 = Extension {
         .name = "VK_KHR_format_feature_flags2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_present_mode_fifo_latest_ready = Extension {
         .name = "VK_EXT_present_mode_fifo_latest_ready",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const fuchsia_external_memory = Extension {
         .name = "VK_FUCHSIA_external_memory",
-        .commands &.{
+        .commands = &.{
             .fuchsia_get_memory_zircon_handle,
             .fuchsia_get_memory_zircon_handle_properties,
         },
     };
     pub const fuchsia_external_semaphore = Extension {
         .name = "VK_FUCHSIA_external_semaphore",
-        .commands &.{
+        .commands = &.{
             .fuchsia_import_semaphore_zircon_handle,
             .fuchsia_get_semaphore_zircon_handle,
         },
     };
     pub const fuchsia_buffer_collection = Extension {
         .name = "VK_FUCHSIA_buffer_collection",
-        .commands &.{
+        .commands = &.{
             .fuchsia_create_buffer_collection,
             .fuchsia_set_buffer_collection_image_constraints,
             .fuchsia_set_buffer_collection_buffer_constraints,
@@ -31043,42 +31043,42 @@ pub const extension_commands = struct {
     };
     pub const huawei_subpass_shading = Extension {
         .name = "VK_HUAWEI_subpass_shading",
-        .commands &.{
+        .commands = &.{
             .huawei_get_device_subpass_shading_max_workgroup_size,
             .huawei_cmd_subpass_shading,
         },
     };
     pub const huawei_invocation_mask = Extension {
         .name = "VK_HUAWEI_invocation_mask",
-        .commands &.{
+        .commands = &.{
             .huawei_cmd_bind_invocation_mask,
         },
     };
     pub const nv_external_memory_rdma = Extension {
         .name = "VK_NV_external_memory_rdma",
-        .commands &.{
+        .commands = &.{
             .nv_get_memory_remote_address,
         },
     };
     pub const ext_pipeline_properties = Extension {
         .name = "VK_EXT_pipeline_properties",
-        .commands &.{
+        .commands = &.{
             .ext_get_pipeline_properties,
         },
     };
     pub const ext_frame_boundary = Extension {
         .name = "VK_EXT_frame_boundary",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_multisampled_render_to_single_sampled = Extension {
         .name = "VK_EXT_multisampled_render_to_single_sampled",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_extended_dynamic_state2 = Extension {
         .name = "VK_EXT_extended_dynamic_state2",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_patch_control_points,
             .ext_cmd_set_rasterizer_discard_enable,
             .ext_cmd_set_depth_bias_enable,
@@ -31088,56 +31088,56 @@ pub const extension_commands = struct {
     };
     pub const ext_color_write_enable = Extension {
         .name = "VK_EXT_color_write_enable",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_color_write_enable,
         },
     };
     pub const ext_primitives_generated_query = Extension {
         .name = "VK_EXT_primitives_generated_query",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_ray_tracing_maintenance1 = Extension {
         .name = "VK_KHR_ray_tracing_maintenance1",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_trace_rays_indirect_2,
         },
     };
     pub const khr_shader_untyped_pointers = Extension {
         .name = "VK_KHR_shader_untyped_pointers",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_global_priority_query = Extension {
         .name = "VK_EXT_global_priority_query",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_image_view_min_lod = Extension {
         .name = "VK_EXT_image_view_min_lod",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_multi_draw = Extension {
         .name = "VK_EXT_multi_draw",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_draw_multi,
             .ext_cmd_draw_multi_indexed,
         },
     };
     pub const ext_image_2d_view_of_3d = Extension {
         .name = "VK_EXT_image_2d_view_of_3d",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_tile_image = Extension {
         .name = "VK_EXT_shader_tile_image",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_opacity_micromap = Extension {
         .name = "VK_EXT_opacity_micromap",
-        .commands &.{
+        .commands = &.{
             .ext_create_micromap,
             .ext_destroy_micromap,
             .ext_cmd_build_micromaps,
@@ -31156,35 +31156,35 @@ pub const extension_commands = struct {
     };
     pub const nv_displacement_micromap = Extension {
         .name = "VK_NV_displacement_micromap",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_load_store_op_none = Extension {
         .name = "VK_EXT_load_store_op_none",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const huawei_cluster_culling_shader = Extension {
         .name = "VK_HUAWEI_cluster_culling_shader",
-        .commands &.{
+        .commands = &.{
             .huawei_cmd_draw_cluster,
             .huawei_cmd_draw_cluster_indirect,
         },
     };
     pub const ext_border_color_swizzle = Extension {
         .name = "VK_EXT_border_color_swizzle",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pageable_device_local_memory = Extension {
         .name = "VK_EXT_pageable_device_local_memory",
-        .commands &.{
+        .commands = &.{
             .ext_set_device_memory_priority,
         },
     };
     pub const khr_maintenance4 = Extension {
         .name = "VK_KHR_maintenance4",
-        .commands &.{
+        .commands = &.{
             .khr_get_device_buffer_memory_requirements,
             .khr_get_device_image_memory_requirements,
             .khr_get_device_image_sparse_memory_requirements,
@@ -31192,68 +31192,68 @@ pub const extension_commands = struct {
     };
     pub const arm_shader_core_properties = Extension {
         .name = "VK_ARM_shader_core_properties",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_subgroup_rotate = Extension {
         .name = "VK_KHR_shader_subgroup_rotate",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const arm_scheduling_controls = Extension {
         .name = "VK_ARM_scheduling_controls",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_image_sliced_view_of_3d = Extension {
         .name = "VK_EXT_image_sliced_view_of_3d",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const valve_descriptor_set_host_mapping = Extension {
         .name = "VK_VALVE_descriptor_set_host_mapping",
-        .commands &.{
+        .commands = &.{
             .valve_get_descriptor_set_layout_host_mapping_info,
             .valve_get_descriptor_set_host_mapping,
         },
     };
     pub const ext_depth_clamp_zero_one = Extension {
         .name = "VK_EXT_depth_clamp_zero_one",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_non_seamless_cube_map = Extension {
         .name = "VK_EXT_non_seamless_cube_map",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const arm_render_pass_striped = Extension {
         .name = "VK_ARM_render_pass_striped",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_fragment_density_map_offset = Extension {
         .name = "VK_QCOM_fragment_density_map_offset",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_copy_memory_indirect = Extension {
         .name = "VK_NV_copy_memory_indirect",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_copy_memory_indirect,
             .nv_cmd_copy_memory_to_image_indirect,
         },
     };
     pub const nv_memory_decompression = Extension {
         .name = "VK_NV_memory_decompression",
-        .commands &.{
+        .commands = &.{
             .nv_cmd_decompress_memory,
             .nv_cmd_decompress_memory_indirect_count,
         },
     };
     pub const nv_device_generated_commands_compute = Extension {
         .name = "VK_NV_device_generated_commands_compute",
-        .commands &.{
+        .commands = &.{
             .nv_get_pipeline_indirect_memory_requirements,
             .nv_cmd_update_pipeline_indirect_buffer,
             .nv_get_pipeline_indirect_device_address,
@@ -31261,42 +31261,42 @@ pub const extension_commands = struct {
     };
     pub const nv_ray_tracing_linear_swept_spheres = Extension {
         .name = "VK_NV_ray_tracing_linear_swept_spheres",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_linear_color_attachment = Extension {
         .name = "VK_NV_linear_color_attachment",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_maximal_reconvergence = Extension {
         .name = "VK_KHR_shader_maximal_reconvergence",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_image_compression_control_swapchain = Extension {
         .name = "VK_EXT_image_compression_control_swapchain",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_image_processing = Extension {
         .name = "VK_QCOM_image_processing",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_nested_command_buffer = Extension {
         .name = "VK_EXT_nested_command_buffer",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_external_memory_acquire_unmodified = Extension {
         .name = "VK_EXT_external_memory_acquire_unmodified",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_extended_dynamic_state3 = Extension {
         .name = "VK_EXT_extended_dynamic_state3",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_depth_clamp_enable,
             .ext_cmd_set_polygon_mode,
             .ext_cmd_set_rasterization_samples,
@@ -31332,12 +31332,12 @@ pub const extension_commands = struct {
     };
     pub const ext_subpass_merge_feedback = Extension {
         .name = "VK_EXT_subpass_merge_feedback",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const arm_tensors = Extension {
         .name = "VK_ARM_tensors",
-        .commands &.{
+        .commands = &.{
             .arm_create_tensor,
             .arm_destroy_tensor,
             .arm_create_tensor_view,
@@ -31353,19 +31353,19 @@ pub const extension_commands = struct {
     };
     pub const ext_shader_module_identifier = Extension {
         .name = "VK_EXT_shader_module_identifier",
-        .commands &.{
+        .commands = &.{
             .ext_get_shader_module_identifier,
             .ext_get_shader_module_create_info_identifier,
         },
     };
     pub const ext_rasterization_order_attachment_access = Extension {
         .name = "VK_EXT_rasterization_order_attachment_access",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_optical_flow = Extension {
         .name = "VK_NV_optical_flow",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_optical_flow_image_formats,
             .nv_create_optical_flow_session,
             .nv_destroy_optical_flow_session,
@@ -31375,22 +31375,22 @@ pub const extension_commands = struct {
     };
     pub const ext_legacy_dithering = Extension {
         .name = "VK_EXT_legacy_dithering",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pipeline_protected_access = Extension {
         .name = "VK_EXT_pipeline_protected_access",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const android_external_format_resolve = Extension {
         .name = "VK_ANDROID_external_format_resolve",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_maintenance5 = Extension {
         .name = "VK_KHR_maintenance5",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_bind_index_buffer_2,
             .khr_get_rendering_area_granularity,
             .khr_get_device_image_subresource_layout,
@@ -31399,34 +31399,34 @@ pub const extension_commands = struct {
     };
     pub const amd_anti_lag = Extension {
         .name = "VK_AMD_anti_lag",
-        .commands &.{
+        .commands = &.{
             .amd_anti_lag_update,
         },
     };
     pub const amdx_dense_geometry_format = Extension {
         .name = "VK_AMDX_dense_geometry_format",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_present_id2 = Extension {
         .name = "VK_KHR_present_id2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_present_wait2 = Extension {
         .name = "VK_KHR_present_wait2",
-        .commands &.{
+        .commands = &.{
             .khr_wait_for_present_2,
         },
     };
     pub const khr_ray_tracing_position_fetch = Extension {
         .name = "VK_KHR_ray_tracing_position_fetch",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_object = Extension {
         .name = "VK_EXT_shader_object",
-        .commands &.{
+        .commands = &.{
             .ext_create_shaders,
             .ext_destroy_shader,
             .ext_get_shader_binary_data,
@@ -31485,7 +31485,7 @@ pub const extension_commands = struct {
     };
     pub const khr_pipeline_binary = Extension {
         .name = "VK_KHR_pipeline_binary",
-        .commands &.{
+        .commands = &.{
             .khr_create_pipeline_binaries,
             .khr_destroy_pipeline_binary,
             .khr_get_pipeline_key,
@@ -31495,35 +31495,35 @@ pub const extension_commands = struct {
     };
     pub const qcom_tile_properties = Extension {
         .name = "VK_QCOM_tile_properties",
-        .commands &.{
+        .commands = &.{
             .qcom_get_framebuffer_tile_properties,
             .qcom_get_dynamic_rendering_tile_properties,
         },
     };
     pub const sec_amigo_profiling = Extension {
         .name = "VK_SEC_amigo_profiling",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_swapchain_maintenance1 = Extension {
         .name = "VK_KHR_swapchain_maintenance1",
-        .commands &.{
+        .commands = &.{
             .khr_release_swapchain_images,
         },
     };
     pub const qcom_multiview_per_view_viewports = Extension {
         .name = "VK_QCOM_multiview_per_view_viewports",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_ray_tracing_invocation_reorder = Extension {
         .name = "VK_NV_ray_tracing_invocation_reorder",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_cooperative_vector = Extension {
         .name = "VK_NV_cooperative_vector",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_cooperative_vector_properties,
             .nv_convert_cooperative_vector_matrix,
             .nv_cmd_convert_cooperative_vector_matrix,
@@ -31531,37 +31531,37 @@ pub const extension_commands = struct {
     };
     pub const nv_extended_sparse_address_space = Extension {
         .name = "VK_NV_extended_sparse_address_space",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_mutable_descriptor_type = Extension {
         .name = "VK_EXT_mutable_descriptor_type",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_legacy_vertex_attributes = Extension {
         .name = "VK_EXT_legacy_vertex_attributes",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const arm_shader_core_builtins = Extension {
         .name = "VK_ARM_shader_core_builtins",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_pipeline_library_group_handles = Extension {
         .name = "VK_EXT_pipeline_library_group_handles",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_dynamic_rendering_unused_attachments = Extension {
         .name = "VK_EXT_dynamic_rendering_unused_attachments",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_low_latency2 = Extension {
         .name = "VK_NV_low_latency2",
-        .commands &.{
+        .commands = &.{
             .nv_set_latency_sleep_mode,
             .nv_latency_sleep,
             .nv_set_latency_marker,
@@ -31571,13 +31571,13 @@ pub const extension_commands = struct {
     };
     pub const khr_cooperative_matrix = Extension {
         .name = "VK_KHR_cooperative_matrix",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_cooperative_matrix_properties,
         },
     };
     pub const arm_data_graph = Extension {
         .name = "VK_ARM_data_graph",
-        .commands &.{
+        .commands = &.{
             .arm_create_data_graph_pipelines,
             .arm_create_data_graph_pipeline_session,
             .arm_get_data_graph_pipeline_session_bind_point_requirements,
@@ -31593,122 +31593,122 @@ pub const extension_commands = struct {
     };
     pub const qcom_multiview_per_view_render_areas = Extension {
         .name = "VK_QCOM_multiview_per_view_render_areas",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_compute_shader_derivatives = Extension {
         .name = "VK_KHR_compute_shader_derivatives",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_decode_av1 = Extension {
         .name = "VK_KHR_video_decode_av1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_encode_av1 = Extension {
         .name = "VK_KHR_video_encode_av1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_decode_vp9 = Extension {
         .name = "VK_KHR_video_decode_vp9",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_maintenance1 = Extension {
         .name = "VK_KHR_video_maintenance1",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_per_stage_descriptor_set = Extension {
         .name = "VK_NV_per_stage_descriptor_set",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_image_processing2 = Extension {
         .name = "VK_QCOM_image_processing2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_filter_cubic_weights = Extension {
         .name = "VK_QCOM_filter_cubic_weights",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_ycbcr_degamma = Extension {
         .name = "VK_QCOM_ycbcr_degamma",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_filter_cubic_clamp = Extension {
         .name = "VK_QCOM_filter_cubic_clamp",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_attachment_feedback_loop_dynamic_state = Extension {
         .name = "VK_EXT_attachment_feedback_loop_dynamic_state",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_attachment_feedback_loop_enable,
         },
     };
     pub const khr_vertex_attribute_divisor = Extension {
         .name = "VK_KHR_vertex_attribute_divisor",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_load_store_op_none = Extension {
         .name = "VK_KHR_load_store_op_none",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_unified_image_layouts = Extension {
         .name = "VK_KHR_unified_image_layouts",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_shader_float_controls2 = Extension {
         .name = "VK_KHR_shader_float_controls2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qnx_external_memory_screen_buffer = Extension {
         .name = "VK_QNX_external_memory_screen_buffer",
-        .commands &.{
+        .commands = &.{
             .qnx_get_screen_buffer_properties,
         },
     };
     pub const msft_layered_driver = Extension {
         .name = "VK_MSFT_layered_driver",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_index_type_uint8 = Extension {
         .name = "VK_KHR_index_type_uint8",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_line_rasterization = Extension {
         .name = "VK_KHR_line_rasterization",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_set_line_stipple,
         },
     };
     pub const khr_calibrated_timestamps = Extension {
         .name = "VK_KHR_calibrated_timestamps",
-        .commands &.{
+        .commands = &.{
             .khr_get_physical_device_calibrateable_time_domains,
             .khr_get_calibrated_timestamps,
         },
     };
     pub const khr_shader_expect_assume = Extension {
         .name = "VK_KHR_shader_expect_assume",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_maintenance6 = Extension {
         .name = "VK_KHR_maintenance6",
-        .commands &.{
+        .commands = &.{
             .khr_cmd_bind_descriptor_sets_2,
             .khr_cmd_push_constants_2,
             .khr_cmd_push_descriptor_set_2,
@@ -31719,33 +31719,33 @@ pub const extension_commands = struct {
     };
     pub const nv_descriptor_pool_overallocation = Extension {
         .name = "VK_NV_descriptor_pool_overallocation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const qcom_tile_memory_heap = Extension {
         .name = "VK_QCOM_tile_memory_heap",
-        .commands &.{
+        .commands = &.{
             .qcom_cmd_bind_tile_memory,
         },
     };
     pub const khr_video_encode_intra_refresh = Extension {
         .name = "VK_KHR_video_encode_intra_refresh",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_encode_quantization_map = Extension {
         .name = "VK_KHR_video_encode_quantization_map",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_raw_access_chains = Extension {
         .name = "VK_NV_raw_access_chains",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_external_compute_queue = Extension {
         .name = "VK_NV_external_compute_queue",
-        .commands &.{
+        .commands = &.{
             .nv_create_external_compute_queue,
             .nv_destroy_external_compute_queue,
             .nv_get_external_compute_queue_data,
@@ -31753,56 +31753,56 @@ pub const extension_commands = struct {
     };
     pub const khr_shader_relaxed_extended_instruction = Extension {
         .name = "VK_KHR_shader_relaxed_extended_instruction",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_command_buffer_inheritance = Extension {
         .name = "VK_NV_command_buffer_inheritance",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_maintenance7 = Extension {
         .name = "VK_KHR_maintenance7",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_shader_atomic_float16_vector = Extension {
         .name = "VK_NV_shader_atomic_float16_vector",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_replicated_composites = Extension {
         .name = "VK_EXT_shader_replicated_composites",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_shader_float8 = Extension {
         .name = "VK_EXT_shader_float8",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_ray_tracing_validation = Extension {
         .name = "VK_NV_ray_tracing_validation",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_cluster_acceleration_structure = Extension {
         .name = "VK_NV_cluster_acceleration_structure",
-        .commands &.{
+        .commands = &.{
             .nv_get_cluster_acceleration_structure_build_sizes,
             .nv_cmd_build_cluster_acceleration_structure_indirect,
         },
     };
     pub const nv_partitioned_acceleration_structure = Extension {
         .name = "VK_NV_partitioned_acceleration_structure",
-        .commands &.{
+        .commands = &.{
             .nv_get_partitioned_acceleration_structures_build_sizes,
             .nv_cmd_build_partitioned_acceleration_structures,
         },
     };
     pub const ext_device_generated_commands = Extension {
         .name = "VK_EXT_device_generated_commands",
-        .commands &.{
+        .commands = &.{
             .ext_get_generated_commands_memory_requirements,
             .ext_cmd_preprocess_generated_commands,
             .ext_cmd_execute_generated_commands,
@@ -31816,102 +31816,102 @@ pub const extension_commands = struct {
     };
     pub const khr_maintenance8 = Extension {
         .name = "VK_KHR_maintenance8",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const mesa_image_alignment_control = Extension {
         .name = "VK_MESA_image_alignment_control",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_depth_clamp_control = Extension {
         .name = "VK_EXT_depth_clamp_control",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_set_depth_clamp_range,
         },
     };
     pub const khr_maintenance9 = Extension {
         .name = "VK_KHR_maintenance9",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_video_maintenance2 = Extension {
         .name = "VK_KHR_video_maintenance2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const huawei_hdr_vivid = Extension {
         .name = "VK_HUAWEI_hdr_vivid",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_cooperative_matrix2 = Extension {
         .name = "VK_NV_cooperative_matrix2",
-        .commands &.{
+        .commands = &.{
             .nv_get_physical_device_cooperative_matrix_flexible_dimensions_properties,
         },
     };
     pub const arm_pipeline_opacity_micromap = Extension {
         .name = "VK_ARM_pipeline_opacity_micromap",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_external_memory_metal = Extension {
         .name = "VK_EXT_external_memory_metal",
-        .commands &.{
+        .commands = &.{
             .ext_get_memory_metal_handle,
             .ext_get_memory_metal_handle_properties,
         },
     };
     pub const khr_depth_clamp_zero_one = Extension {
         .name = "VK_KHR_depth_clamp_zero_one",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_vertex_attribute_robustness = Extension {
         .name = "VK_EXT_vertex_attribute_robustness",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const arm_format_pack = Extension {
         .name = "VK_ARM_format_pack",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const valve_fragment_density_map_layered = Extension {
         .name = "VK_VALVE_fragment_density_map_layered",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_robustness2 = Extension {
         .name = "VK_KHR_robustness2",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const nv_present_metering = Extension {
         .name = "VK_NV_present_metering",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const ext_fragment_density_map_offset = Extension {
         .name = "VK_EXT_fragment_density_map_offset",
-        .commands &.{
+        .commands = &.{
             .ext_cmd_end_rendering_2,
         },
     };
     pub const ext_zero_initialize_device_memory = Extension {
         .name = "VK_EXT_zero_initialize_device_memory",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const khr_present_mode_fifo_latest_ready = Extension {
         .name = "VK_KHR_present_mode_fifo_latest_ready",
-        .commands &.{
+        .commands = &.{
         },
     };
     pub const sec_pipeline_cache_incremental_mode = Extension {
         .name = "VK_SEC_pipeline_cache_incremental_mode",
-        .commands &.{
+        .commands = &.{
         },
     };
 };

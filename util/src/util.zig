@@ -29,8 +29,91 @@ pub const Buffered_byte_writer = @import("reader_writer.zig").Buffered_byte_writ
 pub const drawable = @import("drawing.zig").drawable;
 pub const Draw_point = @import("drawing.zig").Point;
 
+pub const option = @import("options.zig");
+pub const types = @import("types.zig");
+
+pub const event = @import("event.zig");
+
+
 pub var alloc: std.mem.Allocator = undefined;
 const alloc_interface = &@import("allocator.zig").alloc_interface;
+
+pub fn alloc_single(T: type) *T {
+    if (@inComptime()) {
+        var val: T = undefined;
+        return &val;
+    } else {
+        alloc.create(T) catch @panic("no memory");
+    }
+}
+
+pub fn free_single(ptr: anytype) void {
+    if (@inComptime()) {
+        // freeing is not necessary in comptime
+    } else {
+        alloc.destroy(ptr);
+    }
+}
+
+pub fn alloc_slice(T: type, count: usize) []T {
+    if (@inComptime()) {
+        var val: [count]T = undefined;
+        return &val;
+    } else {
+        return alloc.alloc(T, count) catch @panic("no memory");
+    }
+}
+
+pub fn free_slice(ptr: anytype) void {
+    assert(@typeInfo(@TypeOf(ptr)).pointer.size == .slice);
+    if (@inComptime()) {
+        // freeing is not necessary in comptime
+    } else {
+        alloc.free(ptr);
+    }
+}
+
+pub fn realloc(ptr: anytype, new_size: usize) []@typeInfo(@TypeOf(ptr)).pointer.child {
+    assert(@typeInfo(@TypeOf(ptr)).pointer.size == .slice);
+    const T = @typeInfo(@TypeOf(ptr)).pointer.child;
+    if (@inComptime()) {
+        if (new_size <= ptr.len) {
+            return ptr[0..new_size];
+        } else {
+            var new: [new_size]T = undefined;
+            @memcpy(new[0..ptr.len], ptr);
+            return &new;
+        }
+    } else {
+        return alloc.realloc(ptr, new_size) catch @panic("no memory");
+    }
+}
+
+pub fn dupe_slice(input: anytype) []@typeInfo(To_slice_type(@TypeOf(input))).pointer.child {
+    const Child = @typeInfo(To_slice_type(@TypeOf(input))).pointer.child;
+    const slice = to_slice(input);
+    const new = alloc_slice(Child, slice.len);
+    @memcpy(new, slice);
+    return new;
+}
+
+fn To_slice_type(In: type) type {
+    const pointer_info = @typeInfo(In).pointer;
+    return switch (pointer_info.size) {
+        .slice => In,
+        .one => if (pointer_info.is_const) (
+            return []const @typeInfo(pointer_info.child).array.child
+        ) else (
+            return []@typeInfo(pointer_info.child).array.child
+        ),
+        else => unreachable,
+    };
+}
+
+fn to_slice(in: anytype) To_slice_type(@TypeOf(in)) {
+    return in;
+}
+
 
 pub var random: std.Random = undefined;
 var rng: std.Random.DefaultPrng = undefined;
@@ -166,6 +249,14 @@ pub fn all(values: []const bool) bool {
     return true;
 }
 
+pub fn sentinel_to_slice(ptr: anytype) []@typeInfo(@TypeOf(ptr)).pointer.child {
+    const typeinfo = @typeInfo(@TypeOf(ptr)).pointer;
+    assert(typeinfo.size == .many);
+    assert(typeinfo.sentinel() != null);
+    const T = typeinfo.child;
+    return std.mem.span(T, ptr);
+}
+
 pub fn comptime_slice_to_array(comptime slice: anytype) [slice.len]@typeInfo(@TypeOf(slice)).pointer.child {
     return slice[0..slice.len].*;
 }
@@ -198,7 +289,7 @@ pub fn comptime_to_string(comptime value: anytype) [:0]const u8 {
                         var result: [value.len:0]u8 = undefined;
                         @memcpy(result[0..value.len], value);
                         result[value.len] = 0;
-                        return result;
+                        return &result;
                     }
                 },
                 .many => {

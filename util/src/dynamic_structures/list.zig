@@ -10,7 +10,7 @@ pub fn List(Type: type) type {
         count: usize,
         
         pub fn init_with_capacity(list: *Self, capacity: usize) void {
-            list.buffer = u.alloc.alloc(Type, capacity) catch @panic("no memory");
+            list.buffer = u.alloc_slice(Type, capacity);
             list.count = 0;
         }
         
@@ -29,7 +29,7 @@ pub fn List(Type: type) type {
         }
         
         pub fn deinit(list: *Self) void {
-            u.alloc.free(list.buffer);
+            u.free_slice(list.buffer);
         }
         
         pub fn get(list: *Self, index: usize) Type {
@@ -62,7 +62,7 @@ pub fn List(Type: type) type {
         pub fn ensure_capacity(list: *Self, capacity: usize) void {
             if (list.buffer.len < capacity) {
                 const new_capacity: usize = u.next_power_of_two(@intCast(capacity));
-                list.buffer = u.alloc.realloc(list.buffer, new_capacity) catch @panic("no memory");
+                list.buffer = u.realloc(list.buffer, new_capacity);
             }
         }
         
@@ -148,6 +148,16 @@ pub fn List(Type: type) type {
                 .list = list,
                 .index = 0,
             };
+        }
+        
+        pub fn dupe_content(list: *Self) []Type {
+            return u.dupe_slice(list.items());
+        }
+        
+        pub fn convert_to_slice(list: *Self) []Type {
+            const slice = list.dupe_content();
+            list.deinit();
+            return slice;
         }
     };
 }

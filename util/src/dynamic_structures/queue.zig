@@ -11,7 +11,7 @@ pub fn Queue(Type: type) type {
         count: usize,
         
         pub fn init_with_capacity(queue: *Self, capacity: usize) void {
-            queue.buffer = u.alloc.alloc(Type, capacity) catch @panic("no memory");
+            queue.buffer = u.alloc_slice(Type, capacity);
             queue.start = 0;
             queue.count = 0;
         }
@@ -102,7 +102,7 @@ pub fn Queue(Type: type) type {
             const old_capacity = queue.buffer.len;
             if (old_capacity < capacity) {
                 const new_capacity: usize = u.next_power_of_two(@intCast(capacity));
-                queue.buffer = u.alloc.realloc(queue.buffer, new_capacity) catch @panic("no memory");
+                queue.buffer = u.realloc(queue.buffer, new_capacity);
                 
                 u.assert(new_capacity >= old_capacity * 2);
                 if (queue.start + queue.count > old_capacity) {

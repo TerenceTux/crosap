@@ -1,7 +1,7 @@
 const std = @import("std");
 const u = @import("util");
-const Backend = @import("backend").Backend;
-const Backend_texture = @import("backend").Texture_handle;
+const Switching_backend = @import("switching_backend.zig").Backend;
+const Backend_texture = @import("switching_backend.zig").Texture_handle;
 const Crosap = @import("crosap.zig").Crosap;
 const font = @import("font.zig");
 
@@ -613,7 +613,7 @@ pub const Draw_context = struct {
 
 pub const Texture_image = struct {
     image: Backend_texture,
-    backend: Backend,
+    backend: Switching_backend,
     size: u.Vec2i,
     
     pub fn deinit(teximg: *Texture_image) void {

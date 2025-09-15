@@ -2,12 +2,87 @@ const u = @import("util");
 const std = @import("std");
 const crosap_api = @import("crosap_api");
 const Event = crosap_api.Event;
-const Backend_glfw = @import("backend_glfw").Backend;
-const lib_glfw = @import("lib_glfw");
+const backend_imports = @import("backend_modules").imports;
+
+const backend_modules = b: {
+    const import_decls = @typeInfo(backend_imports).@"struct".decls;
+    var list: [import_decls.len][:0]const u8 = undefined;
+    for (&list, import_decls) |*item, decl| {
+        item.* = decl.name;
+    }
+    break:b list;
+};
+const Backend_option = b: {
+    var fields: [backend_modules.len]u.types.Field = undefined;
+    for (&fields, backend_modules) |*field, backend_name| {
+        const Backend_var = @field(backend_imports, backend_name).Backend;
+        const field_type = switch(@typeInfo(@TypeOf(Backend_var))) {
+            .@"struct" => void,
+            .@"fn" => |fn_info| t: {
+                const arguments = fn_info.params;
+                u.assert(arguments.len == 1);
+                break:t arguments[0].type.?;
+            },
+            else => unreachable,
+        };
+        field.* = .{
+            .name = backend_name,
+            .type = field_type,
+        };
+    }
+    break:b u.types.create_tagged_union(&fields);
+};
+
+const Text_option = b: {
+    var fields: [backend_modules.len]u.types.Field = undefined;
+    for (&fields, backend_modules) |*field, backend_name| {
+        const Backend_var = @field(backend_imports, backend_name).Backend;
+        const field_type = switch(@typeInfo(@TypeOf(Backend_var))) {
+            .@"struct" => void,
+            .@"fn" => []const u8,
+            else => unreachable,
+        };
+        field.* = .{
+            .name = backend_name,
+            .type = field_type,
+        };
+    }
+    break:b u.types.create_tagged_union(&fields);
+};
+
+const options = @import("options");
+const backends_options = u.option.get_comptime(options, []const Backend_option, "backend") orelse @panic("no backend option");
+const text_options = u.option.get_comptime(options, []const Text_option, "backend") orelse @panic("no backend option");
 
 pub const Variant = struct {
-    name: @Type(.enum_literal),
+    name: []const u8,
     imp: type,
+};
+
+
+const variants = b: {
+    var result: [backends_options.len]Variant = undefined;
+    for (&result, backends_options, text_options) |*variant, backend_option, text_option| {
+        const mod_name = @tagName(std.meta.activeTag(backend_option));
+        const option_argument = @field(backend_option, mod_name);
+        const option_text = @field(text_option, mod_name);
+        const Backend_var = @field(backend_imports, mod_name).Backend;
+        const Imp = switch(@typeInfo(@TypeOf(Backend_var))) {
+            .@"struct" => Backend_var,
+            .@"fn" => Backend_var(option_argument),
+            else => unreachable,
+        };
+        const name = switch(@typeInfo(@TypeOf(Backend_var))) {
+            .@"struct" => mod_name,
+            .@"fn" => std.fmt.comptimePrint("{s}:{s}", .{mod_name, option_text}),
+            else => unreachable,
+        };
+        variant.* = .{
+            .name = name,
+            .imp = Imp,
+        };
+    }
+    break:b result;
 };
 
 // You can and should copy this
@@ -16,14 +91,13 @@ pub const Texture_handle = struct {
 };
 
 pub const Backend = struct {
-    const allowed_variants = [_]Variant {
-        .{
-            .name = .glfw_vulkan,
-            .imp = Backend_glfw(.vulkan),
-        },
-    };
-    const order = [_]@Type(.enum_literal) {
-        .glfw_vulkan,
+    const allowed_variants = variants;
+    const order = b: {
+        var result: [variants.len][]const u8 = undefined;
+        for (&result, variants) |*item, variant| {
+            item.* = variant.name;
+        }
+        break:b result;
     };
     const Variant_type = variant_type: {
         var fields: [order.len]std.builtin.Type.EnumField = undefined;
@@ -35,7 +109,7 @@ pub const Backend = struct {
         }
         break:variant_type @Type(.{
             .@"enum" = .{
-                .tag_type = u8,
+                .tag_type = usize,
                 .fields = &fields,
                 .decls = &.{},
                 .is_exhaustive = true,
@@ -77,7 +151,7 @@ pub const Backend = struct {
         u.log_start("Initializing backend");
         b.textures.init();
         
-        var variant_index: u8 = 0;
+        var variant_index: usize = 0;
         b.current_variant = @enumFromInt(0);
         while (variant_index < variant_count) {
             b.current_variant = @enumFromInt(variant_index);

@@ -1,11 +1,11 @@
 const u = @import("util");
-const lib_glfw = @import("lib_glfw");
+const lib_glfw = @import("glfw");
 const crosap_api = @import("crosap_api");
 const Event = crosap_api.Event;
 const Pointer = crosap_api.Pointer;
 const Button_type = crosap_api.Button_type;
 const Button_state = crosap_api.Button_state;
-const render_vulkan = @import("backend_render_vulkan");
+const render_vulkan = @import("render_vulkan");
 
 pub const Render_type = enum {
     vulkan,

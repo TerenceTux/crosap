@@ -1,5 +1,7 @@
 #!/bin/sh
 
-rm -rf zig-cache
-rm -rf zig-out
+project="$(dirname "$0")/.."
+
+find "$project" -type d -name ".zig-cache" -exec rm -r {} +
+find "$project" -type d -name "zig-out" -exec rm -r {} +
 rm -rf "~/.cache/zig"

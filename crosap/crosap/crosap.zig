@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 const u = @import("util");
-const Backend = @import("backend").Backend;
+const Switching_backend = @import("switching_backend.zig").Backend;
 const Draw_frame = @import("backend").Draw_frame;
 const draw = @import("draw.zig");
 
@@ -9,7 +9,7 @@ pub const Draw_context = draw.Draw_context;
 pub const Create_imagemap = draw.Create_imagemap;
 
 pub const Crosap = struct {
-    backend: Backend,
+    backend: Switching_backend,
     general: draw.General_map,
     scale: u.Int,
     should_close: bool,
@@ -27,9 +27,6 @@ pub const Crosap = struct {
         cr.should_close = false;
         cr.scale = .create(4);
         cr.backend.init();
-        const test_num = 36.827298999996856;
-        u.log(.{"TEST: printing ",36.827298999996856});
-        u.log(.{"TEST: ",u.Real.from_float(test_num)});
         
         cr.init_imagemap(&cr.general, draw.General_map.Drawer {.some_members = .zero});
     }
