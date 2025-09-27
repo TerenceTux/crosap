@@ -207,6 +207,10 @@ pub fn Backend(render_type: Render_type) type {
             u.log_start("Create glfw window");
             defer u.log_end({});
             
+            try b.glfw.set_window_hint(.maximized, lib_glfw.types.window_hint_value.v_true);
+            try b.glfw.set_window_hint(.depth_bits, 0);
+            try b.glfw.set_window_hint(.stencil_bits, 0);
+            try b.glfw.set_window_hint(.alpha_bits, 0);
             switch (render_type) {
                 .vulkan => {
                     try b.glfw.set_window_hint(.client_api, lib_glfw.types.window_hint_value.no_api);

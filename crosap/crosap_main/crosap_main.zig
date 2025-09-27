@@ -8,13 +8,14 @@ const Button_state = crosap_api.Button_state;
 const Button_type = crosap_api.Button_type;
 const Pointer = crosap_api.Pointer;
 const ui = @import("crosap").ui;
+const activity = @import("crosap").activity;
 
 const init_activity_data: []const u8 = b: {
     var data = u.List(u8).create();
     var writer = data.writer();
     var bit_writer = u.serialize.create_bit_writer(8, u.writer(u8).static(&writer));
     var exporter = u.serialize.create_exporter(u.serialize.bit_writer.static(&bit_writer));
-    exporter.write("main");
+    exporter.write(@as([]const u8, "main"));
     bit_writer.deinit();
     break:b &u.comptime_slice_to_array(data.convert_to_slice());
 };
@@ -45,7 +46,7 @@ pub const Crosap_main = struct {
         u.log_start(.{"Main activity init"});
         var reader = u.Slice_reader(u8).create(init_activity_data);
         var bit_reader = u.serialize.create_bit_reader(8, u.reader(u8).static(&reader));
-        main.activity = create_activity_from_bits(u.serialize.bit_reader.static(&bit_reader));
+        main.activity = create_activity_from_bits(u.serialize.bit_reader.dynamic(&bit_reader));
         u.log_end(.{"Main activity init"});
         
         main.last_update = u.time_seconds();
@@ -54,6 +55,7 @@ pub const Crosap_main = struct {
     pub fn deinit(main: *Crosap_main) void {
         u.log_start(.{"App deinit"});
         main.activity.deinit(&main.cr);
+        main.activity.free();
         u.log_end(.{"App deinit"});
         
         u.log_start(.{"Crosap deinit"});
@@ -123,61 +125,25 @@ pub const Crosap_main = struct {
 };
 
 
-pub const activity = u.interface(struct {
-    deinit: fn(cr: *Crosap) void,
-    root_element: fn(cr: *Crosap) ui.flexible_element.Dynamic_interface,
-    export_data: fn(cr: *Crosap, writer: u.serialize.bit_writer.Dynamic_interface) void,
-    update: fn(cr: *Crosap, dtime: u.Real) Keyboard_info, // root_element.update will also be called after this, so don't do that yourself
-    key_input: fn(cr: *Crosap, key: Button_type, event: Key_event) void,
-    
-    pub fn Interface(Imp: type) type {
-        return struct {
-            const Selfp = *const @This();
-            imp: Imp,
-            
-            pub fn deinit(s: Selfp, cr: *Crosap) void {
-                return s.imp.call(.deinit, .{cr});
-            }
-            
-            pub fn root_element(s: Selfp, cr: *Crosap) ui.flexible_element.Dynamic_interface {
-                return s.imp.call(.root_element, .{cr});
-            }
-            
-            pub fn export_data(s: Selfp, cr: *Crosap, writer: u.serialize.bit_writer.Dynamic_interface) u.Vec2i {
-                return s.imp.call(.export_data, .{cr, writer});
-            }
-        };
-    }
-});
-
-pub const Key_event = enum {
-    press,
-    release,
-    repeat,
-};
-
-pub const Keyboard_info = enum {
-    keyboard_not_needed,
-    keyboard_needed,
-};
-
-pub fn create_activity_from_bits(reader: anytype) activity.Dynamic_interface {
-    const importer = u.serialize.create_importer(reader);
+pub fn create_activity_from_bits(reader: u.serialize.bit_reader.Dynamic_interface) activity.Dynamic_interface {
+    var importer = u.serialize.create_importer(reader);
     const name = importer.read([]const u8);
+    defer u.free_slice(name);
     const app_activity_fields = @typeInfo(app_activities).@"struct".decls;
-    for (app_activity_fields) |field| {
+    inline for (app_activity_fields) |field| {
         if (u.bytes_equal(field.name, name)) {
-            const new_activity = u.alloc_single(field.type);
+            const Activity = @field(app_activities, field.name);
+            const new_activity = u.alloc_single(Activity);
             new_activity.init_from_data(reader);
             return activity.dynamic(new_activity);
         }
     }
-    std.debug.panic("unknown activity {}", name);
+    std.debug.panic("unknown activity {s}", .{name});
 }
 
 pub fn export_activity_to_bits(act: anytype, writer: anytype) void {
     activity.validate(act);
-    const exporter = u.serialize.create_importer(writer);
+    var exporter = u.serialize.create_importer(writer);
     // The hard part is determining the name of this activity
     if (@TypeOf(act) == activity.Dynamic_interface) {
         const deinit_fn = act.imp.fns.deinit;

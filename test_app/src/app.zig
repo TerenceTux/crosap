@@ -1,7 +1,8 @@
 const std = @import("std");
 const u = @import("util");
-const Crosap = @import("crosap").Crosap;
-const ui = @import("crosap").ui;
+const crosap = @import("crosap");
+const Crosap = crosap.Crosap;
+const ui = crosap.ui;
 const Draw_context = @import("crosap").Draw_context;
 
 const Object = struct {
@@ -10,20 +11,24 @@ const Object = struct {
     color: u.Screen_color,
 };
 
-const activities = struct {
+pub const activities = struct {
     pub const main = Main_activity;
 };
 
-pub const Main_activity = struct {
+const Main_activity = struct {
     root_el: ui.Plain_color,
     
-    pub fn init(act: *Main_activity, data: u.importer.Dynamic) void {
+    pub fn root_element(act: *Main_activity) ui.flexible_element.Dynamic_interface {
+        return ui.flexible_element.dynamic(&act.root_el);
+    }
+    
+    pub fn init_from_data(act: *Main_activity, data: u.serialize.bit_reader.Dynamic_interface) void {
         _ = data;
-        act.root_el = ui.Plain_color.init(.from_byte_rgb(0, 255, 0, 255));
+        act.root_el.init(.from_byte_rgb(0, 255, 0));
     }
     
     pub fn deinit(act: *Main_activity, cr: *Crosap) void {
-        cr.deinit_element(act.root_el);
+        cr.deinit_element(&act.root_el);
     }
     
     pub fn free(act: *Main_activity) void {
@@ -34,9 +39,11 @@ pub const Main_activity = struct {
         _ = writer;
     }
     
-    pub fn update(act: *Main_activity, cr: *Crosap, dtime: u.Real) u.Vec2i {
-        act.update(cr, dtime);
-        return .zero;
+    pub fn update(act: *Main_activity, cr: *Crosap, dtime: u.Real) crosap.Keyboard_info {
+        _ = act;
+        _ = cr;
+        _ = dtime;
+        return .keyboard_not_needed;
     }
     
     pub fn draw_frame(act: *Main_activity, draw: Draw_context) void {
@@ -139,5 +146,11 @@ pub const Main_activity = struct {
         draw.image(.create(.create(4*31), .create(4*3)), draw.cr.general.get(.nfont_tilde));
         
         draw.image(.create(.create(0), .create(64)), draw.cr.general.texture.get(.create(.zero, draw.cr.general.texture.size)));
+    }
+    
+    pub fn key_input(cr: *Crosap, key: crosap.Button_type, event: crosap.Key_event) void {
+        _ = cr;
+        _ = key;
+        _ = event;
     }
 };

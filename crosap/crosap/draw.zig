@@ -22,6 +22,9 @@ pub const General_map = Create_imagemap(struct {
 //                 draw_interface.draw_image(scale.multiply(.create(4)), buffer);
 //             }
 //         },
+        .solid = struct {
+            pub const image = Solid_image {};
+        },
         .nfont_capital_a = struct {
             pub const image = font.Capital_a.create(font_width);
         },
@@ -526,6 +529,28 @@ const Test_image = struct {
     }
 };
 
+const Solid_image = struct {
+    pub fn size(image: *Solid_image) u.Vec2i {
+        _ = image;
+        return .create(.create(1), .create(1));
+    }
+    
+    pub fn start(image: *Solid_image, scale: u.Int) void {
+        _ = image;
+        _ = scale;
+    }
+    
+    pub fn end(image: *Solid_image) void {
+        _ = image;
+    }
+    
+    pub fn pixel(image: *Solid_image, p: u.Draw_point) u.Color {
+        _ = image;
+        _ = p;
+        return .from_byte_rgb(255, 255, 255);
+    }
+};
+
 
 pub const Draw_context = struct {
     area: u.Rect2i,
@@ -618,7 +643,7 @@ pub const Draw_context = struct {
     }
     
     pub fn rect(draw_context: *const Draw_context, context_rect: u.Rect2i, color: u.Screen_color) void {
-        const t_image = draw_context.cr.general_texture.get(.create(.zero, .create(16, 16)));
+        const t_image = draw_context.cr.general.get(.solid);
         draw_context.repeated_color(context_rect, t_image, color);
     }
 };

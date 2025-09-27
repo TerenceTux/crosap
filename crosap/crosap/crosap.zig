@@ -5,9 +5,15 @@ const Switching_backend = @import("switching_backend.zig").Backend;
 const Draw_frame = @import("backend").Draw_frame;
 const draw = @import("draw.zig");
 
+const crosap_api = @import("crosap_api");
+pub const Button_type = crosap_api.Button_type;
 pub const ui = @import("ui.zig");
 pub const Draw_context = draw.Draw_context;
 pub const Create_imagemap = draw.Create_imagemap;
+
+pub const activity = @import("activity.zig").activity;
+pub const Key_event = @import("activity.zig").Key_event;
+pub const Keyboard_info = @import("activity.zig").Keyboard_info;
 
 pub const Crosap = struct {
     backend: Switching_backend,
@@ -83,5 +89,11 @@ pub const Crosap = struct {
     pub fn deinit_imagemap(cr: *Crosap, map: anytype) void {
         _ = cr;
         map.texture.deinit();
+    }
+    
+    pub fn deinit_element(cr: *Crosap, element: anytype) void {
+        const general_element = ui.element.dynamic(element);
+        // remove it from our administration
+        general_element.deinit(cr);
     }
 };

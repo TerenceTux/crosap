@@ -56,10 +56,10 @@ const alloc_interface = &@import("allocator.zig").alloc_interface;
 
 pub fn alloc_single(T: type) *T {
     if (@inComptime()) {
-        var val: T = undefined;
+        comptime var val: T = undefined;
         return &val;
     } else {
-        alloc.create(T) catch @panic("no memory");
+        return alloc.create(T) catch @panic("no memory");
     }
 }
 
@@ -73,7 +73,7 @@ pub fn free_single(ptr: anytype) void {
 
 pub fn alloc_slice(T: type, count: usize) []T {
     if (@inComptime()) {
-        var val: [count]T = undefined;
+        comptime var val: [count]T = undefined;
         return &val;
     } else {
         return alloc.alloc(T, count) catch @panic("no memory");
@@ -96,7 +96,7 @@ pub fn realloc(ptr: anytype, new_size: usize) []@typeInfo(@TypeOf(ptr)).pointer.
         if (new_size <= ptr.len) {
             return ptr[0..new_size];
         } else {
-            var new: [new_size]T = undefined;
+            comptime var new: [new_size]T = undefined;
             @memcpy(new[0..ptr.len], ptr);
             return &new;
         }
@@ -349,7 +349,7 @@ pub fn comptime_to_string(comptime value: anytype) [:0]const u8 {
                     if (pointer_info.sentinel() == 0) {
                         return value;
                     } else {
-                        var result: [value.len:0]u8 = undefined;
+                        comptime var result: [value.len:0]u8 = undefined;
                         @memcpy(result[0..value.len], value);
                         result[value.len] = 0;
                         return &result;

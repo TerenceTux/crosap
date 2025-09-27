@@ -103,7 +103,8 @@ pub fn Exporter(Writer: type) type {
                                 exporter.write(slice.len);
                             } else {
                                 exporter.write_0();
-                                exporter.write_as(u8, @intCast(slice.len));
+                                const truncated: u8 = @intCast(slice.len);
+                                exporter.write_as(u8, &truncated);
                             }
                             for (slice) |item| {
                                 exporter.write(item);
@@ -179,27 +180,29 @@ pub fn Bit_writer_from_int(bits: u16, Writer: type) type {
         }
     });
     u.writer(Int).validate(Writer);
+    const Index = std.math.Log2Int(Int);
+    const max_index: Index = @intCast(bits - 1);
     return struct {
         const This = @This();
         writer: Writer,
-        current_byte: u8,
+        current: Int,
         bit_index: u3, // the bit to write to, starts at 7
         
         pub fn write(w: *This, bit: u1) void {
-            w.current_byte |= @as(u8, bit) << w.bit_index;
+            w.current |= @as(Int, bit) << w.bit_index;
             if (w.bit_index == 0) {
                 // wrote to the last bit of the byte
-                w.writer.write(w.current_byte);
-                w.current_byte = 0;
-                w.bit_index = 7;
+                w.writer.write(w.current);
+                w.current = 0;
+                w.bit_index = max_index;
             } else {
                 w.bit_index -= 1;
             }
         }
         
         pub fn deinit(w: *This) void {
-            if (w.bit_index != 7) {
-                w.writer.write(w.current_byte);
+            if (w.bit_index != max_index) {
+                w.writer.write(w.current);
             }
         }
     };
@@ -208,8 +211,8 @@ pub fn Bit_writer_from_int(bits: u16, Writer: type) type {
 pub fn create_bit_writer(bits: u16, writer: anytype) Bit_writer_from_int(bits, @TypeOf(writer)) {
     return .{
         .writer = writer,
-        .current_byte = 0,
-        .bit_index = 7,
+        .current = 0,
+        .bit_index = bits - 1,
     };
 }
 
@@ -234,7 +237,7 @@ pub fn Importer(Reader: type) type {
         
         pub fn read_to(importer: *This, T: type, value: *T) void {
             const type_info = @typeInfo(T);
-            if (u.has_method(T, "export_to_bits")) {
+            if (comptime u.has_method(T, "import_from_bits")) {
                 value.import_from_bits(importer);
                 return;
             }
@@ -266,7 +269,7 @@ pub fn Importer(Reader: type) type {
                                 var bit: u.Uint_that_fits(int_info.bits - 1) = int_info.bits - 1;
                                 while (true) {
                                     if (importer.read_bool()) {
-                                        number |= 1 << bit;
+                                        number |= @as(T, 1) << bit;
                                     }
                                     if (bit == 0) {
                                         break;
@@ -362,7 +365,7 @@ pub fn Importer(Reader: type) type {
     };
 }
 
-pub fn create_importer(reader: anytype) Exporter(@TypeOf(reader)) {
+pub fn create_importer(reader: anytype) Importer(@TypeOf(reader)) {
     return Importer(@TypeOf(reader)).create(reader);
 }
 
@@ -370,15 +373,19 @@ pub const bit_reader = u.reader(u1);
 
 pub fn Bit_reader_from_int(bits: u16, Reader: type) type {
     const Int = @Type(.{
-        .signedness = .unsigned,
-        .bits = bits,
+        .int = .{
+            .signedness = .unsigned,
+            .bits = bits,
+        },
     });
     u.reader(Int).validate(Reader);
+    const Index = std.math.Log2Int(Int);
+    const max_index: Index = @intCast(bits - 1);
     return struct {
         const This = @This();
         reader: Reader,
-        current_byte: u8,
-        bit_index: u3, // The bit we have already read, so you can read bit_index - 1
+        current: Int,
+        bit_index: Index, // The bit we have already read, so you can read bit_index - 1
         
         pub fn read(r: *This) ?u1 {
             return if (r.read_bool()) |val| (
@@ -389,20 +396,20 @@ pub fn Bit_reader_from_int(bits: u16, Reader: type) type {
         fn read_bool(r: *This) ?bool {
             if (r.bit_index == 0) {
                 // no bits available, we need to retrieve a new byte
-                r.current_byte = r.reader.read() orelse return null;
-                r.bit_index = 7;
+                r.current = r.reader.read() orelse return null;
+                r.bit_index = max_index;
             } else {
                 r.bit_index -= 1;
             }
-            return r.current_byte & (1 << r.bit_index) != 0;
+            return r.current & (@as(Int, 1) << r.bit_index) != 0;
         }
     };
 }
 
-pub fn create_bit_reader(bits: u16, reader: anytype) Bit_reader_from_int(bits, @TypeOf(reader)) {
+pub fn create_bit_reader(comptime bits: u16, reader: anytype) Bit_reader_from_int(bits, @TypeOf(reader)) {
     return .{
-        .writer = reader,
-        .current_byte = 0,
+        .reader = reader,
+        .current = 0,
         .bit_index = 0,
     };
 }

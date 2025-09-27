@@ -4,7 +4,7 @@ const Draw_context = @import("draw.zig").Draw_context;
 const Crosap = @import("crosap.zig").Crosap;
 
 pub const element = u.interface(struct {
-    deinit: fn(cr: *Crosap) void, // is this really needed? can't the activity deinit all elements?
+    deinit: fn(cr: *Crosap) void,
     // when this is called, the position is known, so you can get the scroll offset
     frame: fn(draw: Draw_context) void,
     pointer_start: fn(info: *Pointer_context) void,
@@ -176,8 +176,17 @@ pub const click_handler = u.interface(struct {
     }
 });
 
+pub fn create_flexible_element(Element: type) fn(el: *Element) element.Dynamic_interface {
+    return struct {
+        pub fn f(el: *Element) element.Dynamic_interface {
+            return element.dynamic(el);
+        }
+    }.f;
+}
+
 
 pub const Plain_color = struct { // flexible_element
+    pub const get_element = create_flexible_element(Plain_color);
     color: u.Screen_color,
     
     pub fn init(el: *Plain_color, color: u.Color) void {
@@ -194,5 +203,23 @@ pub const Plain_color = struct { // flexible_element
     
     pub fn frame(el: *Plain_color, draw: Draw_context) void {
         draw.rect(draw.area, el.color);
+    }
+    
+    pub fn pointer_start(el: *Plain_color, info: *Pointer_context) void {
+        _ = el;
+        _ = info;
+    }
+    
+    pub fn scroll_end(el: *Plain_color, cr: *Crosap, velocity: u.Vec2r) void {
+        _ = el;
+        _ = cr;
+        _ = velocity;
+    }
+    
+    pub fn scroll_step(el: *Plain_color, cr: *Crosap, steps: u.Int) ?u.Int {
+        _ = el;
+        _ = cr;
+        _ = steps;
+        return null;
     }
 };
