@@ -1,0 +1,57 @@
+Clicking on an element must do some probing
+This must return an element we can track (somehow)
+When the pointer has moved a certain amount relative to the tracking element, the pointer is in dragging mode
+After ~1 second without significant moving, it's a long click
+If the pointer is released without significant moving, it's a normal click
+
+Tracking the elements of pointer can happen in Crosap
+As a Hasmap(*Pointer, Pointerinfo)
+where pointerinfo keeps track of the mode and the element
+But we also need Hasmap(element.imp as *anyopaque, List(*Pointer))
+so on deinit of an element, it can quickly cancel all pointer actions.
+
+When clicking somewhere, the elements may give two things:
+ -  The element that will get a click, long click or both
+ -  The element that will either receive scroll events, or drag events.
+We need to fire a scroll event on pointer press, because the element may be scrolling automatically (because of a previous kinetic scrolling for example)
+
+Actually, for scrolling we need a scroll chain, because if the inner element is at the edge, the outer element should scroll.
+Or do we only want dragging for scrolling? Other drag actions are replacable.
+No, we need dragging for sliders. But that may make a page unable to scroll, which is bad.
+We could see slider dragging as some kind of scrolling, so if the slider is at the right, moving your finger from left to right makes the page move to the left
+That solves normal slider, but you can also have infinite sliders, like selecting a year. For this, the element must go to an deactivated state when you click on it, allowing you to scroll the page.
+So on pointer start, the element must append items to the scroll chain, and return the element that will handle a possible (long) click.
+
+But we need to inform the elements if a pointer is active, so no automatic scrolling may happen.
+And a clickable elements often wants to know that there is a pointer that is possibly clicking it.
+For scrolling, the best solution is to give a optional scroll offset as argument to the update function. When it's null, no pointer is active on the element and the element may scroll automatically.
+When the scrolling ends, we can give the end velocity as a scroll_end function
+
+The must be done at update, because you have to if you should do automatic scrolling. But for scrolling, you need the size (to determine if we are at the edge).
+But, the container may not know where to render the element until it knows the size.
+So we might do two fases: update (+scroll and return size) and render (with a position determined by the container)
+But, for rendering, an element will need the sizes of it's children, and we can't call update again to request it.
+= Root ==  First   ==  Second  ==  Third =
+update ->  update  ->  update  ->  update
+render -> get size -> get size -> get size
+       \>  render  -> get size -> get size
+                   \>  render  -> get size
+                               \>  render
+So, if calculating the size is not trivial, the element should store it.
+Then we have tree fases: update (internally calculating it's size), get size and render
+Update will always be executes, but render only when the element is (partially) visible, so you might want to do some work there that doesn't have to happen when the element is not visible.
+The scroll offset can't be an argument to update, because this can only be known after all children of the element are scrolled.
+So in the update function, an element should first call the update of it's children, and then it can request it's own scroll offset from crosap.
+To scroll, the element must know it's size. So we first have to calculate the sizes of all elements.
+
+But, to calculate scrolling, the element must also know it's position.
+
+Oh, about keyboard input. Focus is a big problem: to what elements should we send key events? You can give focus when clicking, but that will be a chain again, and you also want to automatically focus elements.
+The solution is to not allow focus. All key events are send to the activity, and the activity must decide if a virtual keyboard is needed (on update?).
+This means you can't have two input elements on the screen. It's a bit constraining how your ui can look, but it's way easier.
+
+Something else: sometimes, the element struct must be allocated on the heap. For example, because the root element is variable. It might be best to force elements to be allocated on the heap.
+That simplifies deinit and allows us to use the pointer as identifier. (Otherwise, if an element contains another element as first attribute they have the same memory location.)
+Deiniting elements must be done via Crosap, so we can remove it from our input hashmaps.
+
+A small problem: when an element is resized, we don't know on which side. Even if we solve this, we can never know on which size the window is resized.

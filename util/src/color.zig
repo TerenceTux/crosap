@@ -55,6 +55,9 @@ pub const Color = struct {
         const red_srgb = c.red.square_root();
         const green_srgb = c.green.square_root();
         const blue_srgb = c.blue.square_root();
+//         const red_srgb = c.red;
+//         const green_srgb = c.green;
+//         const blue_srgb = c.blue;
         
         const alpha_byte = c.alpha.multiply(.from_int(255));
         const red_byte = red_srgb.multiply(.from_int(255));

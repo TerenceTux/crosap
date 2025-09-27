@@ -178,8 +178,10 @@ pub fn interface(info: type) type {
             @compileError("interface validation failed for type "++@typeName(Type)++": "++message);
         }
         
+        /// Tests if the argument is either interface.Static(Imp) or interface.Dynamic
+        /// You can pass the type or a value of that type
         pub fn validate(passed_interface: anytype) void {
-            const Type = @TypeOf(passed_interface);
+            const Type = if (@TypeOf(passed_interface) == type) passed_interface else @TypeOf(passed_interface);
             switch (@typeInfo(Type)) {
                 .@"struct" => {},
                 else => validation_error(Type, "not a struct"),

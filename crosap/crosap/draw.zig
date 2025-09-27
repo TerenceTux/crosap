@@ -507,7 +507,19 @@ const Test_image = struct {
     pub fn pixel(image: *Test_image, p: u.Draw_point) u.Color {
         _ = image;
         var c = u.Color.transparent;
-        if (p.in_line(.create(.from_int(7), .from_int(1)), .create(.from_int(7), .from_int(15)), .from_float(0.2))) {
+        if (p.in_line(.create(.from_float(7.8), .from_int(1)), .create(.from_float(7), .from_int(15)), .from_float(0.05))) {
+            c.add(.from_byte_rgb(255, 255, 255));
+        }
+        if (p.in_line(.create(.from_float(7.9), .from_int(1)), .create(.from_float(7.2), .from_int(15)), .from_float(0.05))) {
+            c.add(.from_byte_rgb(255, 255, 255));
+        }
+        if (p.in_line(.create(.from_float(8), .from_int(1)), .create(.from_float(7.4), .from_int(15)), .from_float(0.05))) {
+            c.add(.from_byte_rgb(255, 255, 255));
+        }
+        if (p.in_line(.create(.from_float(8.1), .from_int(1)), .create(.from_float(7.6), .from_int(15)), .from_float(0.05))) {
+            c.add(.from_byte_rgb(255, 255, 255));
+        }
+        if (p.in_line(.create(.from_float(8.2), .from_int(1)), .create(.from_float(7.8), .from_int(15)), .from_float(0.05))) {
             c.add(.from_byte_rgb(255, 255, 255));
         }
         return c;

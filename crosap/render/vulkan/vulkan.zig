@@ -974,7 +974,7 @@ const Swapimage = struct {
         const vertex_buffer = try r.device.create_buffer(@sizeOf(Draw_object) * draw_buffer_size, .just(.vertex_buffer), .stream);
         var indirect_buffer = try r.device.create_buffer(@sizeOf(lib_vulkan.types.Draw_indexed_indirect_command), .just(.indirect_buffer), .stream);
         if (vertex_buffer.mapped == null) {
-            @panic("vertex buffer must be mappable");
+            return error.vertex_buffer_not_mappable;
         }
         const draw_command = lib_vulkan.types.Draw_indexed_indirect_command {
             .index_count = 6,

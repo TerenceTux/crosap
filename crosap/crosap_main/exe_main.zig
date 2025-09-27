@@ -12,10 +12,10 @@ var cr_main: Crosap_main = undefined;
 
 pub fn main() void {
     cr_main.init();
-    var backend = &cr_main.cr().backend;
+    const backend = &cr_main.cr.backend;
     
     main_loop: while (true) {
-        if (cr_main.cr().should_close) {
+        if (cr_main.cr.should_close) {
             u.log(.{"App wanted to close, so we quit"});
             break;
         }

@@ -8,6 +8,20 @@ pub const List = @import("dynamic_structures/list.zig").List;
 pub const Queue = @import("dynamic_structures/queue.zig").Queue;
 pub const Resource_list = @import("dynamic_structures/resource_list.zig").Resource_list;
 
+const hashmap = @import("dynamic_structures/hashmap.zig");
+pub const Custom_map = hashmap.Custom_map;
+pub const Map = hashmap.Map;
+pub const String_map = hashmap.String_map;
+pub const Custom_set = hashmap.Custom_set;
+pub const Set = hashmap.Set;
+pub const String_set = hashmap.String_set;
+pub const Custom_static_map = hashmap.Custom_static_map;
+pub const Static_map = hashmap.Static_map;
+pub const Static_string_map = hashmap.Static_string_map;
+pub const Custom_static_set = hashmap.Custom_static_set;
+pub const Static_set = hashmap.Static_set;
+pub const Static_string_set = hashmap.Static_string_set;
+
 pub const Vec2i = @import("vec.zig").Vec2i;
 pub const Vec2r = @import("vec.zig").Vec2r;
 pub const Rect2i = @import("vec.zig").Rect2i;
@@ -25,12 +39,14 @@ pub const byte_reader = @import("reader_writer.zig").byte_reader;
 pub const byte_writer = @import("reader_writer.zig").byte_writer;
 pub const Buffered_byte_reader = @import("reader_writer.zig").Buffered_byte_reader;
 pub const Buffered_byte_writer = @import("reader_writer.zig").Buffered_byte_writer;
+pub const Slice_reader = @import("reader_writer.zig").Slice_reader;
 
 pub const drawable = @import("drawing.zig").drawable;
 pub const Draw_point = @import("drawing.zig").Point;
 
 pub const option = @import("options.zig");
 pub const types = @import("types.zig");
+pub const serialize = @import("serialize.zig");
 
 pub const event = @import("event.zig");
 
@@ -114,6 +130,18 @@ fn to_slice(in: anytype) To_slice_type(@TypeOf(in)) {
     return in;
 }
 
+pub fn bytes_equal(a: []const u8, b: []const u8) bool {
+    if (a.len != b.len) {
+        return false;
+    }
+    for (a, b) |a_c, b_c| {
+        if (a_c != b_c) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 pub var random: std.Random = undefined;
 var rng: std.Random.DefaultPrng = undefined;
@@ -161,6 +189,41 @@ pub fn assert(must_be: bool) void {
     if (!must_be) {
         unreachable;
     }
+}
+
+pub fn has_method(Type: type, comptime name: []const u8) bool {
+    const type_info = @typeInfo(Type);
+    switch (type_info) {
+        .@"struct", .@"enum", .@"union", .@"opaque" => {
+            return @hasDecl(Type, name);
+        },
+        .pointer => |pointer_info| {
+            if (pointer_info.size == .one) {
+                const Child = pointer_info.child;
+                switch (@typeInfo(Child)) {
+                    .@"struct", .@"enum", .@"union", .@"opaque" => {
+                        return @hasDecl(Child, name);
+                    },
+                    else => {},
+                }
+            }
+        },
+        else => {},
+    }
+    return false;
+}
+
+// Returns the unsigned integer type that can at least contain the number 0 to max (inclusive)
+pub fn Uint_that_fits(comptime max: usize) type {
+    const bits = std.math.log_int(usize, 2, max);
+    // if max = 7, bits is 2, so we need 3 bits
+    // if max = 8, bits is 3, so we need 4 bits to hold the number 8
+    return @Type(.{
+        .int = .{
+            .signedness = .unsigned,
+            .bits = bits + 1,
+        },
+    });
 }
 
 

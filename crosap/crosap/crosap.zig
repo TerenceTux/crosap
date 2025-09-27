@@ -5,6 +5,7 @@ const Switching_backend = @import("switching_backend.zig").Backend;
 const Draw_frame = @import("backend").Draw_frame;
 const draw = @import("draw.zig");
 
+pub const ui = @import("ui.zig");
 pub const Draw_context = draw.Draw_context;
 pub const Create_imagemap = draw.Create_imagemap;
 
@@ -15,15 +16,6 @@ pub const Crosap = struct {
     should_close: bool,
     
     pub fn init(cr: *Crosap) void {
-        u.log("Welcome to crosap.");
-        switch (builtin.mode) {
-            .Debug => u.log("Running in DEBUG mode. Performance will be bad!"),
-            .ReleaseSafe => std.debug.print("WARNING: running in ReleaseSafe mode, which can have lower performance, because a lot of runtime checks are enabled. Consider using ReleaseFast.", .{}),
-            .ReleaseFast => {},
-            .ReleaseSmall => std.debug.print("WARNING: running in ReleaseSmall mode, which can have lower performance, because not all performance optimizations are applied. Consider using ReleaseFast.", .{}),
-        }
-        
-        u.log(.{"Built for ",@tagName(builtin.cpu.arch)," (", @sizeOf(usize)*8, " bit ",builtin.cpu.arch.endian()," endian)"});
         cr.should_close = false;
         cr.scale = .create(4);
         cr.backend.init();

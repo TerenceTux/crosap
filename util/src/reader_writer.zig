@@ -104,3 +104,29 @@ pub fn Buffered_byte_writer(Writer: type) type {
         }
     };
 }
+
+pub fn Slice_reader(T: type) type {
+    return struct {
+        const Self = @This();
+        slice: []const T,
+        index: usize,
+        
+        pub fn create(slice: []const T) Self {
+            return .{
+                .slice = slice,
+                .index = 0,
+            };
+        }
+        
+        pub fn read(r: *Self) ?T {
+            if (r.index >= r.slice.len) {
+                return null;
+            } else {
+                const val = r.slice[r.index];
+                r.index += 1;
+                return val;
+            }
+        }
+    };
+}
+
