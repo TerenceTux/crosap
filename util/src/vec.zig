@@ -27,8 +27,21 @@ pub const Vec2i = struct {
         return .create(v1.x.add(v2.x), v1.y.add(v2.y));
     }
     
+    pub fn mut_add(v: *Vec2i, v2: Vec2i) void {
+        v.* = v.add(v2);
+    }
+    
     pub fn subtract(v1: Vec2i, v2: Vec2i) Vec2i {
         return .create(v1.x.subtract(v2.x), v1.y.subtract(v2.y));
+    }
+    
+    pub fn mut_subtract(v: *Vec2i, v2: Vec2i) void {
+        v.* = v.subtract(v2);
+    }
+    
+    /// a.add(a.offset_to(b)) == b
+    pub fn offset_to(v1: Vec2i, v2: Vec2i) Vec2i {
+        return v2.subtract(v1);
     }
     
     pub fn scale_up(v: Vec2i, f: u.Int) Vec2i {
@@ -94,8 +107,21 @@ pub const Vec2r = struct {
         return .create(v1.x.add(v2.x), v1.y.add(v2.y));
     }
     
+    pub fn mut_add(v: *Vec2r, v2: Vec2r) void {
+        v.* = v.add(v2);
+    }
+    
     pub fn subtract(v1: Vec2r, v2: Vec2r) Vec2r {
         return .create(v1.x.subtract(v2.x), v1.y.subtract(v2.y));
+    }
+    
+    pub fn mut_subtract(v: *Vec2r, v2: Vec2r) void {
+        v.* = v.subtract(v2);
+    }
+    
+    /// a.add(a.offset_to(b)) == b
+    pub fn offset_to(v1: Vec2r, v2: Vec2r) Vec2r {
+        return v2.subtract(v1);
     }
     
     pub fn scale(v: Vec2r, f: u.Real) Vec2r {

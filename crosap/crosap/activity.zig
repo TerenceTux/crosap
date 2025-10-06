@@ -1,7 +1,7 @@
 const u = @import("util");
 const Crosap = @import("crosap.zig").Crosap;
 const ui = @import("ui.zig");
-const Button_type = @import("crosap.zig").Button_type;
+const Key = @import("crosap.zig").Key;
 
 pub const activity = u.interface(struct {
     deinit: fn(cr: *Crosap) void,
@@ -9,7 +9,7 @@ pub const activity = u.interface(struct {
     root_element: fn(cr: *Crosap) ui.flexible_element.Dynamic_interface,
     export_data: fn(cr: *Crosap, writer: u.serialize.bit_writer.Dynamic_interface) void,
     update: fn(cr: *Crosap, dtime: u.Real) Keyboard_info, // root_element.update will also be called after this, so don't do that yourself
-    key_input: fn(cr: *Crosap, key: Button_type, event: Key_event) void,
+    key_input: fn(cr: *Crosap, key: Key, event: Key_event) void,
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -36,7 +36,7 @@ pub const activity = u.interface(struct {
                 return s.imp.call(.update, .{cr, dtime});
             }
             
-            pub fn key_input(s: Selfp, cr: *Crosap, key: Button_type, event: Key_event) void {
+            pub fn key_input(s: Selfp, cr: *Crosap, key: Key, event: Key_event) void {
                 s.imp.call(.key_input, .{cr, key, event});
             }
         };

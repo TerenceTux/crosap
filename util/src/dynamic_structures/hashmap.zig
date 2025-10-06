@@ -5,7 +5,7 @@ const std = @import("std");
 // https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function
 pub fn general_hash(data: []const u8) u32 {
     const prime = 0x01000193;
-    var value: u8 = 0x811c9dc5;
+    var value: u32 = 0x811c9dc5;
     for (data) |c| {
         value ^= c;
         value *%= prime;
@@ -25,7 +25,7 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
     const hash_function = fns.hash;
     return struct {
         const This = @This();
-        data: Content,
+        content: Content,
         count: usize,
         
         pub const KV = struct {
@@ -72,11 +72,11 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             }
             
             pub fn next(it: *Iterator_ptr) ?KV_ptr {
-                const ret = if (it.current_item) |item| .{
+                const ret = if (it.current_item) |item| KV_ptr {
                     .key = item.key,
                     .value = &item.value,
                 } else return null;
-                it.current_item = it.current_item.next;
+                it.current_item = it.current_item.?.next;
                 while (it.current_item == null and it.next_index < it.content.size()) {
                     it.try_next_index();
                 }
@@ -87,7 +87,7 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
                 const index = it.next_index;
                 it.next_index += 1;
                 const item_ptr = &it.content.items[index];
-                if (item_ptr) |*item| {
+                if (item_ptr.*) |*item| {
                     it.current_item = item;
                 } else {
                     it.current_item = null;
@@ -109,8 +109,9 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             };
             
             pub fn init(content: *Content, capacity: usize) void {
+                u.assert(u.next_power_of_two(@intCast(capacity)) == capacity);
                 content.items = u.alloc_slice(?Item, capacity);
-                for (&content.items) |*item| {
+                for (content.items) |*item| {
                     item.* = null;
                 }
             }
@@ -124,15 +125,15 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
                 return content.items.len;
             }
             
-            fn index_of_key(content: *Content, key: Key) void {
+            fn index_of_key(content: *Content, key: Key) usize {
                 const hashed = hash_function(key);
-                return mod_power_2(hashed, content.items.len);
+                return mod_power_2(hashed, @intCast(content.items.len));
             }
             
             pub fn get_ptr(content: *Content, key: Key) ?*Value {
                 const index = content.index_of_key(key);
                 const first_item = &content.items[index];
-                var current_item = if (first_item) |*item| item else null;
+                var current_item = if (first_item.*) |*item| item else null;
                 while (current_item) |item| {
                     if (item.key_is(key)) {
                         return &item.value;
@@ -145,14 +146,14 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             pub fn get_or_put(content: *Content, key: Key) Gop_result {
                 const index = content.index_of_key(key);
                 const first_item = &content.items[index];
-                var current_item = if (first_item) |*item| item else {
+                var current_item = if (first_item.*) |*item| item else {
                     first_item.* = .{
                         .key = key,
                         .value = undefined,
                         .next = null,
                     };
                     return .{
-                        .value = &first_item.value,
+                        .value = &first_item.*.?.value,
                         .new = true,
                     };
                 };
@@ -182,16 +183,17 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             }
             
             pub fn iterator_ptr(content: *Content) Iterator_ptr {
-                var ret_iterator: Iterator = undefined;
+                var ret_iterator: Iterator_ptr = undefined;
                 ret_iterator.content = content;
                 ret_iterator.init();
                 return ret_iterator;
             }
             
             pub fn clear(content: *Content) void {
-                for (content.items) |item_o| {
-                    const first = item_o orelse continue;
-                    const current_item = first.next;
+                for (content.items) |*item_o| {
+                    const first = item_o.* orelse continue;
+                    var current_item = first.next;
+                    item_o.* = null;
                     while (current_item) |item| {
                         const next = item.next;
                         u.free_single(item);
@@ -203,11 +205,11 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             pub fn remove(content: *Content, key: Key) error{does_not_exist}!void {
                 const index = content.index_of_key(key);
                 const first_item = &content.items[index];
-                var current_item = if (first_item) |*item| item else {
+                var current_item = if (first_item.*) |*item| item else {
                     return error.does_not_exist;
                 };
                 if (current_item.key_is(key)) {
-                    current_item.* = null;
+                    first_item.* = null;
                     return;
                 }
                 while (true) {
@@ -227,7 +229,7 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
         }
         
         pub fn init_with_capacity(map: *This, capacity: usize) void {
-            map.content = .init(capacity);
+            map.content.init(capacity);
             map.count = 0;
         }
         
@@ -248,7 +250,7 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
         }
         
         pub fn grow(map: *This) void {
-            const new_content: Content = undefined;
+            var new_content: Content = undefined;
             new_content.init(map.content.size() * 2);
             var old_iterator = map.content.iterator_ptr();
             while (old_iterator.next()) |kv| {
@@ -284,7 +286,11 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
         
         pub fn get_or_put(map: *This, key: Key) Gop_result {
             map.check_for_grow();
-            return map.content.get_or_put(key);
+            const result = map.content.get_or_put(key);
+            if (result.new) {
+                map.count += 1;
+            }
+            return result;
         }
         
         pub fn put_new(map: *This, key: Key, value: Value) void {
@@ -299,11 +305,16 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
         }
         
         pub fn remove(map: *This, key: Key) error{does_not_exist}!void {
-            return map.content.remove(key);
+            const result = map.content.remove(key);
+            if (result) {
+                map.count -= 1;
+            } else |_| {}
+            return result;
         }
         
         pub fn clear(map: *This) void {
             map.content.clear();
+            map.count = 0;
         }
         
         pub fn iterator(map: *This) Iterator {
@@ -324,7 +335,7 @@ pub fn Map(Key: type, Value: type) type {
             return std.meta.eql(a, b);
         }
         pub fn hash(k: Key) u32 {
-            return general_hash(std.asBytes(&k));
+            return general_hash(std.mem.asBytes(&k));
         }
     });
 }

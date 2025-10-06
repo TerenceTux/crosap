@@ -7,9 +7,9 @@ pub const element = u.interface(struct {
     deinit: fn(cr: *Crosap) void,
     // when this is called, the position is known, so you can get the scroll offset
     frame: fn(draw: Draw_context) void,
-    pointer_start: fn(info: *Pointer_context) void,
+    pointer_start: fn(info: Pointer_context) void,
     scroll_end: fn(cr: *Crosap, velocity: u.Vec2r) void,
-    scroll_step: fn(cr: *Crosap, steps: u.Int) ?u.Int, // null means this element does not benefit from discrete scrolling, then a normal scroll event is simulated.
+    scroll_step: fn(cr: *Crosap, steps: u.Vec2i) ?u.Vec2i, // null means this element does not benefit from discrete scrolling, then a normal scroll event is simulated.
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -24,7 +24,7 @@ pub const element = u.interface(struct {
                 s.imp.call(.frame, .{draw});
             }
             
-            pub fn pointer_start(s: Selfp, info: *Pointer_context) void {
+            pub fn pointer_start(s: Selfp, info: Pointer_context) void {
                 s.imp.call(.pointer_start, .{info});
             }
             
@@ -32,7 +32,7 @@ pub const element = u.interface(struct {
                 s.imp.call(.scroll_end, .{cr, velocity});
             }
             
-            pub fn scroll_step(s: Selfp, cr: *Crosap, steps: u.Int) ?u.Int {
+            pub fn scroll_step(s: Selfp, cr: *Crosap, steps: u.Vec2i) ?u.Vec2i {
                 return s.imp.call(.scroll_step, .{cr, steps});
             }
         };
@@ -42,13 +42,36 @@ pub const element = u.interface(struct {
 pub const Pointer_context = struct {
     cr: *Crosap,
     pos: u.Vec2i,
-    element_chain: u.List(Dynamic_element),
-    click_handler: ?click_handler.Dynamic_interface,
+    scroll_chain: ?*u.List(Dynamic_element),
+    click_handler: *?click_handler.Dynamic_interface,
+    
+    pub fn add_for_scrolling(context: *const Pointer_context, el: element.Dynamic_interface) void {
+        if (context.scroll_chain) |scroll_chain| {
+            scroll_chain.append(.from_element(el));
+        }
+    }
+    
+    pub fn create_click_handler(context: *const Pointer_context) ?*click_handler.Dynamic_interface {
+        if (context.click_handler.* == null) {
+            context.click_handler.* = @as(click_handler.Dynamic_interface, undefined);
+            return &context.click_handler.*.?;
+        } else {
+            return null;
+        }
+    }
+    
+    pub fn add_click_handler_or_cancel(context: *const Pointer_context, handler: click_handler.Dynamic_interface) void {
+        if (context.click_handler.* == null) {
+            context.click_handler.* = handler;
+        } else {
+            handler.cancel();
+        }
+    }
 };
 
 pub const Dynamic_element = struct {
     element: *anyopaque,
-    vtable: *anyopaque,
+    vtable: *const anyopaque,
     
     pub fn from_element(el: element.Dynamic_interface) Dynamic_element {
         return .{
@@ -61,7 +84,7 @@ pub const Dynamic_element = struct {
         return .{
             .imp = .{
                 .imp = dyn_el.element,
-                .fns = dyn_el.vtable,
+                .fns = @ptrCast(@alignCast(dyn_el.vtable)),
             },
         };
     }
@@ -172,6 +195,18 @@ pub const click_handler = u.interface(struct {
         return struct {
             const Selfp = *const @This();
             imp: Imp,
+            
+            pub fn normal(s: Selfp) void {
+                s.imp.call(.normal, .{});
+            }
+            
+            pub fn long(s: Selfp) void {
+                s.imp.call(.long, .{});
+            }
+            
+            pub fn cancel(s: Selfp) void {
+                s.imp.call(.cancel, .{});
+            }
         };
     }
 });
@@ -184,8 +219,29 @@ pub fn create_flexible_element(Element: type) fn(el: *Element) element.Dynamic_i
     }.f;
 }
 
+pub fn element_no_scroll_end(Element: type) fn(el: *Element, cr: *Crosap, velocity: u.Vec2r) void {
+    return struct {
+        pub fn f(el: *Element, cr: *Crosap, velocity: u.Vec2r) void {
+            _ = el;
+            _ = cr;
+            _ = velocity;
+        }
+    }.f;
+}
 
-pub const Plain_color = struct { // flexible_element
+pub fn element_no_scroll_step(Element: type) fn(el: *Element, cr: *Crosap, steps: u.Vec2i) ?u.Vec2i {
+    return struct {
+        pub fn f(el: *Element, cr: *Crosap, steps: u.Vec2i) ?u.Vec2i {
+            _ = el;
+            _ = cr;
+            _ = steps;
+            return null;
+        }
+    }.f;
+}
+
+
+pub const Plain_color = struct {
     pub const get_element = create_flexible_element(Plain_color);
     color: u.Screen_color,
     
@@ -197,29 +253,22 @@ pub const Plain_color = struct { // flexible_element
         _ = el;
     }
     
-    pub fn update(el: *Plain_color) void {
+    pub fn update(el: *Plain_color, cr: *Crosap, dtime: u.Int, size: u.Vec2i) void {
         _ = el;
+        _ = cr;
+        _ = dtime;
+        _ = size;
     }
     
     pub fn frame(el: *Plain_color, draw: Draw_context) void {
         draw.rect(draw.area, el.color);
     }
     
-    pub fn pointer_start(el: *Plain_color, info: *Pointer_context) void {
+    pub fn pointer_start(el: *Plain_color, info: Pointer_context) void {
         _ = el;
         _ = info;
     }
     
-    pub fn scroll_end(el: *Plain_color, cr: *Crosap, velocity: u.Vec2r) void {
-        _ = el;
-        _ = cr;
-        _ = velocity;
-    }
-    
-    pub fn scroll_step(el: *Plain_color, cr: *Crosap, steps: u.Int) ?u.Int {
-        _ = el;
-        _ = cr;
-        _ = steps;
-        return null;
-    }
+    pub const scroll_end = element_no_scroll_end(Plain_color);
+    pub const scroll_step = element_no_scroll_step(Plain_color);
 };

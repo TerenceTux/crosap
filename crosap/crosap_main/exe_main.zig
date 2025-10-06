@@ -26,8 +26,8 @@ pub fn main() void {
         u.log_start(.{"Handling event queue"});
         while (backend.get_event()) |event| {
             switch (event) {
-                .button_update => |event_info| {
-                    cr_main.button_update(event_info.button, event_info.state);
+                .key_update => |event_info| {
+                    cr_main.key_update(event_info.key, event_info.state);
                 },
                 .pointer_start => |event_info| {
                     cr_main.pointer_start(event_info.pointer);

@@ -1,6 +1,6 @@
 const u = @import("util");
 
-pub const Button_type = enum {
+pub const Key = enum {
     escape,
     f1,
     f2,
@@ -93,40 +93,11 @@ pub const Button_type = enum {
 // Other keys are ignored
 // If no keyboard is connected, we will show a keyboard on screen
 
-pub const Button_state = struct {
-    value: u8,
-    
-    pub const up = Button_state.from_real(.zero);
-    pub const down = Button_state.from_real(.one);
-    
-    pub fn from_real(r: u.Real) Button_state {
-        const int = r.multiply(.from_int(255)).int_floor().clamp(.zero, .create(255));
-        return .{.value = int.to(u8)};
-    }
-    
-    pub fn is_pressed(state: Button_state) bool {
-        return state.value >= 128;
-    }
-    
-    pub fn debug_print(state: Button_state, stream: anytype) void {
-        u.byte_writer.validate(stream);
-        if (state.value == 0) {
-            stream.write_slice("not pressed");
-        } else if (state.value == 255) {
-            stream.write_slice("fully pressed");
-        } else {
-            const percentage = u.Real.from_int(state.value).divide(.from_float(2.55));
-            percentage.int_round().debug_print(stream);
-            stream.write_slice("% pressed");
-        }
-    }
-};
-
 pub const Pointer = struct {
     position: u.Vec2r,
-    button_left: Button_state,
-    button_right: Button_state,
-    button_middle: Button_state,
+    button_left: bool,
+    button_right: bool,
+    button_middle: bool,
     
     pub fn log_state(pointer: *const Pointer) void {
         u.log_start(.{"Pointer state"});
@@ -140,9 +111,9 @@ pub const Pointer = struct {
 
 
 pub const Event = union(enum) {
-    button_update: struct {
-        button: Button_type,
-        state: Button_state,
+    key_update: struct {
+        key: Key,
+        state: bool,
     },
     pointer_start: struct {
         pointer: *const Pointer,

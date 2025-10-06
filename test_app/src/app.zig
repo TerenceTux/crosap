@@ -16,7 +16,7 @@ pub const activities = struct {
 };
 
 const Main_activity = struct {
-    root_el: ui.Plain_color,
+    root_el: Test_element,
     
     pub fn root_element(act: *Main_activity) ui.flexible_element.Dynamic_interface {
         return ui.flexible_element.dynamic(&act.root_el);
@@ -24,7 +24,7 @@ const Main_activity = struct {
     
     pub fn init_from_data(act: *Main_activity, data: u.serialize.bit_reader.Dynamic_interface) void {
         _ = data;
-        act.root_el.init(.from_byte_rgb(0, 255, 0));
+        act.root_el.init(.from_byte_rgb(0, 0, 0));
     }
     
     pub fn deinit(act: *Main_activity, cr: *Crosap) void {
@@ -43,7 +43,7 @@ const Main_activity = struct {
         _ = act;
         _ = cr;
         _ = dtime;
-        return .keyboard_not_needed;
+        return .keyboard_needed;
     }
     
     pub fn draw_frame(act: *Main_activity, draw: Draw_context) void {
@@ -148,9 +148,100 @@ const Main_activity = struct {
         draw.image(.create(.create(0), .create(64)), draw.cr.general.texture.get(.create(.zero, draw.cr.general.texture.size)));
     }
     
-    pub fn key_input(cr: *Crosap, key: crosap.Button_type, event: crosap.Key_event) void {
+    pub fn key_input(act: *Main_activity, cr: *Crosap, key: crosap.Key, event: crosap.Key_event) void {
+        if (key == .space) {
+            if (event == .press) {
+                act.root_el.color = u.Color.from_byte_rgb(0, 64, 0).to_screen_color();
+            } else if (event == .release) {
+                act.root_el.color = u.Color.from_byte_rgb(0, 0, 0).to_screen_color();
+            }
+        }
         _ = cr;
-        _ = key;
-        _ = event;
     }
 };
+
+pub const Test_element = struct {
+    pub const get_element = ui.create_flexible_element(Test_element);
+    color: u.Screen_color,
+    scroll_offset: u.Vec2i,
+    
+    pub fn init(el: *Test_element, color: u.Color) void {
+        el.color = color.to_screen_color();
+        el.scroll_offset = .zero;
+    }
+    
+    pub fn deinit(el: *Test_element) void {
+        _ = el;
+    }
+    
+    pub fn update(el: *Test_element, cr: *Crosap, dtime: u.Int, size: u.Vec2i) void {
+        _ = el;
+        _ = cr;
+        _ = dtime;
+        _ = size;
+    }
+    
+    const grid_size = u.Int.create(32);
+    const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
+    pub fn frame(el: *Test_element, draw: Draw_context) void {
+        if (draw.cr.get_scroll(ui.element.dynamic(el))) |scroll| {
+            el.scroll_offset = el.scroll_offset.add(scroll);
+            u.log(.{"New scroll offset: ",el.scroll_offset});
+        }
+        
+        draw.rect(draw.area, el.color);
+        
+        // horizontal lines
+        var current_y = el.scroll_offset.y.mod(grid_size);
+        while (current_y.lower_than(draw.size().y)) : (current_y = current_y.add(grid_size)) {
+            draw.rect(.create(
+                .create(.zero, current_y),
+                .create(draw.size().x, .one),
+            ), grid_color);
+        }
+        
+        // vertical lines
+        var current_x = el.scroll_offset.x.mod(grid_size);
+        while (current_x.lower_than(draw.size().x)) : (current_x = current_x.add(grid_size)) {
+            draw.rect(.create(
+                .create(current_x, .zero),
+                .create(.one, draw.size().y),
+            ), grid_color);
+        }
+    }
+    
+    pub fn pointer_start(el: *Test_element, info: ui.Pointer_context) void {
+        if (info.create_click_handler()) |click_handler| {
+            click_handler.* = ui.click_handler.dynamic(Click_handler.create(el));
+        }
+        info.add_for_scrolling(ui.element.dynamic(el));
+    }
+    
+    const Click_handler = struct {
+        el: *Test_element,
+        
+        pub fn create(element: *Test_element) *Click_handler {
+            const handler = u.alloc_single(Click_handler);
+            handler.el = element;
+            return handler;
+        }
+        
+        pub fn normal(handler: *Click_handler) void {
+            handler.el.color = u.Color.from_byte_rgb(0, 0, 96).to_screen_color();
+            u.free_single(handler);
+        }
+        
+        pub fn long(handler: *Click_handler) void {
+            handler.el.color = u.Color.from_byte_rgb(64, 0, 64).to_screen_color();
+            u.free_single(handler);
+        }
+        
+        pub fn cancel(handler: *Click_handler) void {
+            u.free_single(handler);
+        }
+    };
+    
+    pub const scroll_end = ui.element_no_scroll_end(Test_element);
+    pub const scroll_step = ui.element_no_scroll_step(Test_element);
+};
+

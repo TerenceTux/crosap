@@ -37,10 +37,18 @@ pub const Int = struct {
         );
     }
     
+    pub fn mut_add(v: *Int, v2: Int) void {
+        v.* = v.add(v2);
+    }
+    
     pub fn subtract(v1: Int, v2: Int) Int {
         return .create(
             v1.v - v2.v
         );
+    }
+    
+    pub fn mut_subtract(v: *Int, v2: Int) void {
+        v.* = v.subtract(v2);
     }
     
     pub fn multiply(v1: Int, v2: Int) Int {
@@ -277,6 +285,10 @@ pub const Real = struct {
         };
     }
     
+    pub fn mut_add(v: *Real, v2: Real) void {
+        v.* = v.add(v2);
+    }
+    
     pub fn negate(r: Real) Real {
         return .{
             .v = -r.v,
@@ -293,6 +305,10 @@ pub const Real = struct {
         return .{
             .v = r1.v - r2.v,
         };
+    }
+    
+    pub fn mut_subtract(v: *Real, v2: Real) void {
+        v.* = v.subtract(v2);
     }
     
     pub fn difference(r1: Real, r2: Real) Real {

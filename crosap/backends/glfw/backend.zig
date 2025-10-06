@@ -3,9 +3,23 @@ const lib_glfw = @import("glfw");
 const crosap_api = @import("crosap_api");
 const Event = crosap_api.Event;
 const Pointer = crosap_api.Pointer;
-const Button_type = crosap_api.Button_type;
-const Button_state = crosap_api.Button_state;
+const Key = crosap_api.Key;
 const render_vulkan = @import("render_vulkan");
+
+const Backend_event = union(enum) {
+    key_update: struct {
+        key: Key,
+        state: bool
+    },
+    mouse_start: Pointer,
+    mouse_end,
+    mouse_move: u.Vec2r,
+    mouse_button_left: bool,
+    mouse_button_right: bool,
+    mouse_button_middle: bool,
+    mouse_scroll: u.Vec2r,
+    quit,
+};
 
 pub const Render_type = enum {
     vulkan,
@@ -24,13 +38,17 @@ pub fn Backend(render_type: Render_type) type {
         const This = @This();
         render: Render_data,
         
-        events: u.Queue(Event),
+        events: u.Queue(Backend_event),
         glfw: lib_glfw.Loader,
         window: lib_glfw.Window,
         
         mouse_in_window: bool,
         mouse_active: bool,
         mouse: Pointer, // undefined on !mouse_active
+        mouse_button_left: bool,
+        mouse_button_right: bool,
+        mouse_button_middle: bool,
+        
         key_callback: Key_callback,
         mouse_button_callback: Mouse_button_callback,
         cursor_move_callback: Cursor_move_callback,
@@ -46,16 +64,16 @@ pub fn Backend(render_type: Render_type) type {
                 if (glfw_keycode_to_key(key)) |button| {
                     if (action == .press) {
                         context.b.events.add_end(.{
-                            .button_update = .{
-                                .button = button,
-                                .state = .down,
+                            .key_update = .{
+                                .key = button,
+                                .state = true,
                             },
                         });
                     } else if (action == .release) {
                         context.b.events.add_end(.{
-                            .button_update = .{
-                                .button = button,
-                                .state = .up,
+                            .key_update = .{
+                                .key = button,
+                                .state = false,
                             },
                         });
                     }
@@ -71,39 +89,49 @@ pub fn Backend(render_type: Render_type) type {
             
             pub fn call(context: *Mouse_button_callback, button: c_int, action: lib_glfw.types.Key_action, mods: c_int) void {
                 u.log(.{"GLFW button callback, button: ",button,", action: ",action,", mods: ",mods});
-                const state: Button_state = switch (action) {
-                    .press => .down,
-                    .release => .up,
+                const b = context.b;
+                const state = switch (action) {
+                    .press => true,
+                    .release => false,
                     else => return,
                 };
-                if (context.b.mouse_active) {
-                    const mouse = &context.b.mouse;
+                if (b.mouse_active) {
+                    var event: Backend_event = undefined;
                     switch (button) {
-                        1 => mouse.button_left = state,
-                        2 => mouse.button_right = state,
-                        3 => mouse.button_middle = state,
+                        0 => {
+                            b.mouse_button_left = state;
+                            event = .{
+                                .mouse_button_left = state,
+                            };
+                        },
+                        1 => {
+                            b.mouse_button_right = state;
+                            event = .{
+                                .mouse_button_right = state,
+                            };
+                        },
+                        2 => {
+                            b.mouse_button_middle = state;
+                            event = .{
+                                .mouse_button_middle = state,
+                            };
+                        },
                         else => {
                             u.log(.{"Unsupported button"});
                             return;
                         },
                     }
-                    context.b.events.add_end(.{
-                        .pointer_update = .{
-                            .pointer = mouse,
-                        },
-                    });
-                    if (!context.b.mouse_in_window) {
+                    b.events.add_end(event);
+                    if (!b.mouse_in_window) {
                         if (!u.any(&.{
-                            mouse.button_left.is_pressed(),
-                                   mouse.button_right.is_pressed(),
-                                   mouse.button_middle.is_pressed(),
+                            b.mouse_button_left,
+                            b.mouse_button_right,
+                            b.mouse_button_middle,
                         })) {
-                            context.b.events.add_end(.{
-                                .pointer_stop = .{
-                                    .pointer = mouse,
-                                },
+                            b.events.add_end(.{
+                                .mouse_end = {},
                             });
-                            context.b.mouse_active = false;
+                            b.mouse_active = false;
                         }
                     }
                 }
@@ -116,23 +144,17 @@ pub fn Backend(render_type: Render_type) type {
             pub fn call(context: *Cursor_move_callback, x_pos: f64, y_pos: f64) void {
                 u.log(.{"GLFW cursor move callback, x_pos: ",x_pos,", y_pos: ",y_pos});
                 if (context.b.mouse_active) {
-                    context.b.mouse.position = .create(.from_float(x_pos), .from_float(y_pos));
                     context.b.events.add_end(.{
-                        .pointer_update = .{
-                            .pointer = &context.b.mouse,
-                        },
+                        .mouse_move = .create(.from_float(x_pos), .from_float(y_pos)),
                     });
                 } else if (context.b.mouse_in_window) {
                     context.b.mouse_active = true;
-                    context.b.mouse = .{
-                        .position = .create(.from_float(x_pos), .from_float(y_pos)),
-                        .button_left = .up,
-                        .button_right = .up,
-                        .button_middle = .up,
-                    };
                     context.b.events.add_end(.{
-                        .pointer_start = .{
-                            .pointer = &context.b.mouse,
+                        .mouse_start = .{
+                            .position = .create(.from_float(x_pos), .from_float(y_pos)),
+                            .button_left = false,
+                            .button_right = false,
+                            .button_middle = false,
                         },
                     });
                 }
@@ -144,22 +166,19 @@ pub fn Backend(render_type: Render_type) type {
             b: *This,
             
             pub fn call(context: *Cursor_enter_callback, entered: bool) void {
-                context.b.mouse_in_window = entered;
+                const b = context.b;
+                b.mouse_in_window = entered;
                 if (entered) {
                     u.log(.{"GLFW cursor entered window callback"});
                 } else {
                     u.log(.{"GLFW cursor leaved window callback"});
-                    if (!u.any(&.{
-                        context.b.mouse.button_left.is_pressed(),
-                        context.b.mouse.button_right.is_pressed(),
-                        context.b.mouse.button_middle.is_pressed(),
+                    if (b.mouse_active and !u.any(&.{
+                        b.mouse_button_left,
+                        b.mouse_button_right,
+                        b.mouse_button_middle,
                     })) {
-                        context.b.events.add_end(.{
-                            .pointer_stop = .{
-                                .pointer = &context.b.mouse,
-                            },
-                        });
-                        context.b.mouse_active = false;
+                        b.events.add_end(.mouse_end);
+                        b.mouse_active = false;
                     }
                 }
             }
@@ -172,10 +191,7 @@ pub fn Backend(render_type: Render_type) type {
                 u.log(.{"GLFW scroll callback, x_offset: ",x_offset,", y_offset: ",y_offset});
                 if (context.b.mouse_active) {
                     context.b.events.add_end(.{
-                        .pointer_scroll = .{
-                            .pointer = &context.b.mouse,
-                            .offset = .create(.from_float(x_offset), .from_float(y_offset)),
-                        },
+                        .mouse_scroll = .create(.from_float(x_offset), .from_float(y_offset)),
                     });
                 }
             }
@@ -273,18 +289,92 @@ pub fn Backend(render_type: Render_type) type {
             try b.glfw.poll_events();
             if (b.window.should_close()) {
                 b.events.add_end(.{
-                    .quit = .{},
+                    .quit = {},
                 });
             }
         }
         
         pub fn get_event(b: *This) !?Event {
+            if (b.events.pop_start()) |b_event| {
+                switch (b_event) {
+                    .key_update => |key_info| {
+                        return Event {
+                            .key_update = .{
+                                .key = key_info.key,
+                                .state = key_info.state,
+                            },
+                        };
+                    },
+                    .mouse_start => |pointer_state| {
+                        b.mouse = pointer_state;
+                        return Event {
+                            .pointer_start = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_end => {
+                        return Event {
+                            .pointer_stop = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_move => |pos| {
+                        b.mouse.position = pos;
+                        return Event {
+                            .pointer_update = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_button_left => |state| {
+                        b.mouse.button_left = state;
+                        return Event {
+                            .pointer_update = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_button_right => |state| {
+                        b.mouse.button_right = state;
+                        return Event {
+                            .pointer_update = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_button_middle => |state| {
+                        b.mouse.button_left = state;
+                        return Event {
+                            .pointer_update = .{
+                                .pointer = &b.mouse,
+                            },
+                        };
+                    },
+                    .mouse_scroll => |offset| {
+                        return Event {
+                            .pointer_scroll = .{
+                                .pointer = &b.mouse,
+                                .offset = offset,
+                            },
+                        };
+                    },
+                    .quit => {
+                        return Event {
+                            .quit = .{},
+                        };
+                    },
+                }
+            } else {
+                return null;
+            }
             return b.events.pop_start();
         }
     };
 }
 
-fn glfw_keycode_to_key(keycode: c_int) ?Button_type {
+fn glfw_keycode_to_key(keycode: c_int) ?Key {
     // https://www.glfw.org/docs/3.3/group__keys.html
     return switch (keycode) {
         32 => .space,

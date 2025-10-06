@@ -9,7 +9,6 @@ const font_width = u.Real.from_float(0.25);
 
 pub const General_map = Create_imagemap(struct {
     const Drawer = @This();
-    some_members: u.Int,
     
     pub const size = u.Vec2i.create(.create(64), .create(256));
     pub const images = .{

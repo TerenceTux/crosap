@@ -6,7 +6,8 @@ const Draw_frame = @import("backend").Draw_frame;
 const draw = @import("draw.zig");
 
 const crosap_api = @import("crosap_api");
-pub const Button_type = crosap_api.Button_type;
+pub const Key = crosap_api.Key;
+pub const Pointer = crosap_api.Pointer;
 pub const ui = @import("ui.zig");
 pub const Draw_context = draw.Draw_context;
 pub const Create_imagemap = draw.Create_imagemap;
@@ -15,24 +16,36 @@ pub const activity = @import("activity.zig").activity;
 pub const Key_event = @import("activity.zig").Key_event;
 pub const Keyboard_info = @import("activity.zig").Keyboard_info;
 
+const Dynamic_element = ui.element.Dynamic_interface;
+
 pub const Crosap = struct {
     backend: Switching_backend,
     general: draw.General_map,
     scale: u.Int,
     should_close: bool,
+    keyboard_state: std.EnumArray(Key, bool),
+    to_scroll: u.Map(Dynamic_element, To_scroll_info),
+    
+    const To_scroll_info = struct {
+        amount: u.Vec2i,
+        otherwise: ?Dynamic_element,
+    };
     
     pub fn init(cr: *Crosap) void {
         cr.should_close = false;
         cr.scale = .create(4);
+        cr.keyboard_state = .initFill(false);
+        cr.to_scroll.init_with_capacity(32);
         cr.backend.init();
         
-        cr.init_imagemap(&cr.general, draw.General_map.Drawer {.some_members = .zero});
+        cr.init_imagemap(&cr.general, draw.General_map.Drawer {});
     }
     
     pub fn deinit(cr: *Crosap) void {
         cr.deinit_imagemap(&cr.general);
         
         cr.backend.deinit();
+        cr.to_scroll.deinit();
     }
     
     pub fn new_frame(cr: *Crosap) ?Draw_context {
@@ -95,5 +108,36 @@ pub const Crosap = struct {
         const general_element = ui.element.dynamic(element);
         // remove it from our administration
         general_element.deinit(cr);
+    }
+    
+    pub fn key_is_pressed(cr: *Crosap, key: Key) bool {
+        return cr.keyboard_state.get(key);
+    }
+    
+    pub fn get_scroll(cr: *Crosap, element: Dynamic_element) ?u.Vec2i {
+        if (cr.to_scroll.get_ptr(element)) |scroll_info| {
+            return scroll_info.amount;
+        } else {
+            return null;
+        }
+    }
+    
+    pub fn pixel_to_position(cr: *Crosap, pixel: u.Vec2r) u.Vec2i {
+        const exact = cr.pixel_to_position_exact(pixel);
+        return .create(
+            exact.x.int_floor(),
+            exact.y.int_floor(),
+        );
+    }
+    
+    pub fn pixel_to_position_exact(cr: *Crosap, pixel: u.Vec2r) u.Vec2r {
+        return .create(
+            pixel.x.divide(cr.scale.to_real()),
+            pixel.y.divide(cr.scale.to_real()),
+        );
+    }
+    
+    pub fn position_to_pixel(cr: *Crosap, pos: u.Vec2i) u.Vec2i {
+        return pos.scale(cr.scale);
     }
 };
