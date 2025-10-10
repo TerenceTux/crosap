@@ -555,6 +555,7 @@ pub const Draw_context = struct {
     area: u.Rect2i,
     mask: u.Rect2i,
     cr: *Crosap,
+    dtime: u.Real,
     
     pub const Align_horizontal = enum {
         left,

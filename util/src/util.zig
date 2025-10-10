@@ -280,7 +280,11 @@ pub fn write_positive_int_string(to_writer: anytype, inp: anytype, base_i: u8) v
     }
     
     var factor: Type = 1;
+    const max_factor = std.math.maxInt(Type) / base;
     while (true) {
+        if (factor > max_factor) { // we are allowed to multiply max_factor with base
+            break;
+        }
         const new_factor = factor * base;
         if (int / new_factor == 0) {
             break;

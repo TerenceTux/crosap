@@ -6,6 +6,8 @@ pub const Int = struct {
     
     pub const zero = create(0);
     pub const one = create(1);
+    pub const bound_max = create(1_000_000_000);
+    pub const bound_min = bound_max.negate();
     
     pub fn debug_print(i: Int, stream: anytype) void {
         u.byte_writer.validate(stream);
@@ -33,33 +35,57 @@ pub const Int = struct {
     
     pub fn add(v1: Int, v2: Int) Int {
         return .create(
-            v1.v + v2.v
+            v1.v + v2.v,
         );
+    }
+    
+    pub fn add_bounded(v1: Int, v2: Int) Int {
+        return Int.create(
+            v1.v +| v2.v,
+        ).clamp(bound_min, bound_max);
     }
     
     pub fn mut_add(v: *Int, v2: Int) void {
         v.* = v.add(v2);
     }
     
+    pub fn mut_add_bounded(v: *Int, v2: Int) void {
+        v.* = v.add_bounded(v2);
+    }
+    
     pub fn subtract(v1: Int, v2: Int) Int {
         return .create(
-            v1.v - v2.v
+            v1.v - v2.v,
         );
+    }
+    
+    pub fn subtract_bounded(v1: Int, v2: Int) Int {
+        return Int.create(
+            v1.v -| v2.v,
+        ).clamp(bound_min, bound_max);
     }
     
     pub fn mut_subtract(v: *Int, v2: Int) void {
         v.* = v.subtract(v2);
     }
     
+    pub fn mut_subtract_bounded(v: *Int, v2: Int) void {
+        v.* = v.subtract_bounded(v2);
+    }
+    
+    pub fn offset_to(from: Int, end: Int) Int {
+        return end.subtract(from);
+    }
+    
     pub fn multiply(v1: Int, v2: Int) Int {
         return .create(
-            v1.v * v2.v
+            v1.v * v2.v,
         );
     }
     
     pub fn divide(v1: Int, v2: Int) Int {
         return .create(
-            @divFloor(v1.v, v2.v)
+            @divFloor(v1.v, v2.v),
         );
     }
     
@@ -153,6 +179,22 @@ pub const Int = struct {
             return i;
         }
     }
+    
+    pub fn clamp_min(i: Int, lowest: Int) Int {
+        if (i.lower_than(lowest)) {
+            return lowest;
+        } else {
+            return i;
+        }
+    }
+    
+    pub fn clamp_max(i: Int, highest: Int) Int {
+        if (i.higher_than(highest)) {
+            return highest;
+        } else {
+            return i;
+        }
+    }
 };
 
 pub const Real = struct {
@@ -164,6 +206,9 @@ pub const Real = struct {
     
     pub const zero = Real {.v = 0};
     pub const one = Real {.v = factor};
+    
+    pub const bound_max = from_int(1_000_000_000);
+    pub const bound_min = bound_max.negate();
     
     pub fn debug_print(r: Real, stream: anytype) void {
         u.byte_writer.validate(stream);
@@ -285,8 +330,18 @@ pub const Real = struct {
         };
     }
     
+    pub fn add_bounded(r1: Real, r2: Real) Real {
+        return (Real {
+            .v = r1.v +| r2.v,
+        }).clamp(bound_min, bound_max);
+    }
+    
     pub fn mut_add(v: *Real, v2: Real) void {
         v.* = v.add(v2);
+    }
+    
+    pub fn mut_add_bounded(v: *Real, v2: Real) void {
+        v.* = v.add_bounded(v2);
     }
     
     pub fn negate(r: Real) Real {
@@ -307,8 +362,22 @@ pub const Real = struct {
         };
     }
     
+    pub fn subtract_bounded(r1: Real, r2: Real) Real {
+        return (Real {
+            .v = r1.v -| r2.v,
+        }).clamp(bound_min, bound_max);
+    }
+    
     pub fn mut_subtract(v: *Real, v2: Real) void {
         v.* = v.subtract(v2);
+    }
+    
+    pub fn mut_subtract_bounded(v: *Real, v2: Real) void {
+        v.* = v.subtract_bounded(v2);
+    }
+    
+    pub fn offset_to(from: Real, end: Real) Real {
+        return end.subtract(from);
     }
     
     pub fn difference(r1: Real, r2: Real) Real {
@@ -521,6 +590,22 @@ pub const Real = struct {
         if (r.lower_than(lowest)) {
             return lowest;
         } else if(r.higher_than(highest)) {
+            return highest;
+        } else {
+            return r;
+        }
+    }
+    
+    pub fn clamp_min(r: Real, lowest: Real) Real {
+        if (r.lower_than(lowest)) {
+            return lowest;
+        } else {
+            return r;
+        }
+    }
+    
+    pub fn clamp_max(r: Real, highest: Real) Real {
+        if (r.higher_than(highest)) {
             return highest;
         } else {
             return r;

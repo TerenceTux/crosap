@@ -24,19 +24,47 @@ pub const Vec2i = struct {
     }
     
     pub fn add(v1: Vec2i, v2: Vec2i) Vec2i {
-        return .create(v1.x.add(v2.x), v1.y.add(v2.y));
+        return .create(
+            v1.x.add(v2.x),
+            v1.y.add(v2.y),
+        );
+    }
+    
+    pub fn add_bounded(v1: Vec2i, v2: Vec2i) Vec2i {
+        return .create(
+            v1.x.add_bounded(v2.x),
+            v1.y.add_bounded(v2.y),
+        );
     }
     
     pub fn mut_add(v: *Vec2i, v2: Vec2i) void {
         v.* = v.add(v2);
     }
     
+    pub fn mut_add_bounded(v: *Vec2i, v2: Vec2i) void {
+        v.* = v.add_bounded(v2);
+    }
+    
     pub fn subtract(v1: Vec2i, v2: Vec2i) Vec2i {
-        return .create(v1.x.subtract(v2.x), v1.y.subtract(v2.y));
+        return .create(
+            v1.x.subtract(v2.x),
+            v1.y.subtract(v2.y),
+        );
+    }
+    
+    pub fn subtract_bounded(v1: Vec2i, v2: Vec2i) Vec2i {
+        return .create(
+            v1.x.subtract_bounded(v2.x),
+            v1.y.subtract_bounded(v2.y),
+        );
     }
     
     pub fn mut_subtract(v: *Vec2i, v2: Vec2i) void {
         v.* = v.subtract(v2);
+    }
+    
+    pub fn mut_subtract_bounded(v: *Vec2i, v2: Vec2i) void {
+        v.* = v.subtract_bounded(v2);
     }
     
     /// a.add(a.offset_to(b)) == b
@@ -104,19 +132,47 @@ pub const Vec2r = struct {
     }
     
     pub fn add(v1: Vec2r, v2: Vec2r) Vec2r {
-        return .create(v1.x.add(v2.x), v1.y.add(v2.y));
+        return .create(
+            v1.x.add(v2.x),
+            v1.y.add(v2.y)
+        );
+    }
+    
+    pub fn add_bounded(v1: Vec2r, v2: Vec2r) Vec2r {
+        return .create(
+            v1.x.add_bounded(v2.x),
+            v1.y.add_bounded(v2.y),
+        );
     }
     
     pub fn mut_add(v: *Vec2r, v2: Vec2r) void {
         v.* = v.add(v2);
     }
     
+    pub fn mut_add_bounded(v: *Vec2r, v2: Vec2r) void {
+        v.* = v.add_bounded(v2);
+    }
+    
     pub fn subtract(v1: Vec2r, v2: Vec2r) Vec2r {
-        return .create(v1.x.subtract(v2.x), v1.y.subtract(v2.y));
+        return .create(
+            v1.x.subtract(v2.x),
+            v1.y.subtract(v2.y),
+        );
+    }
+    
+    pub fn subtract_bounded(v1: Vec2r, v2: Vec2r) Vec2r {
+        return .create(
+            v1.x.subtract_bounded(v2.x),
+            v1.y.subtract_bounded(v2.y),
+        );
     }
     
     pub fn mut_subtract(v: *Vec2r, v2: Vec2r) void {
         v.* = v.subtract(v2);
+    }
+    
+    pub fn mut_subtract_bounded(v: *Vec2r, v2: Vec2r) void {
+        v.* = v.subtract_bounded(v2);
     }
     
     /// a.add(a.offset_to(b)) == b

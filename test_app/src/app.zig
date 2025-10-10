@@ -164,10 +164,16 @@ pub const Test_element = struct {
     pub const get_element = ui.create_flexible_element(Test_element);
     color: u.Screen_color,
     scroll_offset: u.Vec2i,
+    auto_buildup: u.Vec2r,
+    auto_velocity: u.Vec2r,
+    
+    const auto_slow_down = u.Real.from_int(1024);
     
     pub fn init(el: *Test_element, color: u.Color) void {
         el.color = color.to_screen_color();
         el.scroll_offset = .zero;
+        el.auto_buildup = .zero;
+        el.auto_velocity = .zero;
     }
     
     pub fn deinit(el: *Test_element) void {
@@ -185,8 +191,30 @@ pub const Test_element = struct {
     const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
     pub fn frame(el: *Test_element, draw: Draw_context) void {
         if (draw.cr.get_scroll(ui.element.dynamic(el))) |scroll| {
-            el.scroll_offset = el.scroll_offset.add(scroll);
+            el.scroll_offset.mut_add_bounded(scroll);
             u.log(.{"New scroll offset: ",el.scroll_offset});
+        } else {
+            const start_velocity = el.auto_velocity;
+            const velocity_length = start_velocity.length();
+            if (velocity_length.higher_than(.zero)){
+                const velocity_dir = start_velocity.scale_down(velocity_length);
+                const stop_time = velocity_length.divide(auto_slow_down);
+                var used_time = draw.dtime;
+                if (draw.dtime.higher_or_equal(stop_time)) {
+                    // we stop this frame
+                    used_time = stop_time;
+                    el.auto_velocity = .zero;
+                } else {
+                    const new_velocity = velocity_length.subtract(draw.dtime.multiply(auto_slow_down));
+                    el.auto_velocity = velocity_dir.scale(new_velocity);
+                }
+                const avg_changing_velocity = start_velocity.add(el.auto_velocity).scale(.from_float(0.5));
+                const moved = avg_changing_velocity.scale(used_time).add(el.auto_velocity.scale(draw.dtime.subtract(used_time)));
+                el.auto_buildup.mut_add(moved);
+                const moved_dots = el.auto_buildup.round_to_vec2i();
+                el.auto_buildup.mut_subtract(moved_dots.to_vec2r());
+                el.scroll_offset.mut_add_bounded(moved_dots);
+            }
         }
         
         draw.rect(draw.area, el.color);
@@ -212,17 +240,19 @@ pub const Test_element = struct {
     
     pub fn pointer_start(el: *Test_element, info: ui.Pointer_context) void {
         if (info.create_click_handler()) |click_handler| {
-            click_handler.* = ui.click_handler.dynamic(Click_handler.create(el));
+            click_handler.* = ui.click_handler.dynamic(Click_handler.create(el, info.pos));
         }
         info.add_for_scrolling(ui.element.dynamic(el));
     }
     
     const Click_handler = struct {
         el: *Test_element,
+        pos: u.Vec2i,
         
-        pub fn create(element: *Test_element) *Click_handler {
+        pub fn create(element: *Test_element, position: u.Vec2i) *Click_handler {
             const handler = u.alloc_single(Click_handler);
             handler.el = element;
+            handler.pos = position;
             return handler;
         }
         
@@ -241,7 +271,14 @@ pub const Test_element = struct {
         }
     };
     
-    pub const scroll_end = ui.element_no_scroll_end(Test_element);
+    pub fn scroll_end(el: *Test_element, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
+        _ = cr;
+        el.auto_buildup = .zero;
+        el.auto_velocity = velocity;
+        //@panic("Test");
+        return .zero;
+    }
+    
     pub const scroll_step = ui.element_no_scroll_step(Test_element);
 };
 

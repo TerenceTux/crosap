@@ -8,7 +8,7 @@ pub const element = u.interface(struct {
     // when this is called, the position is known, so you can get the scroll offset
     frame: fn(draw: Draw_context) void,
     pointer_start: fn(info: Pointer_context) void,
-    scroll_end: fn(cr: *Crosap, velocity: u.Vec2r) void,
+    scroll_end: fn(cr: *Crosap, velocity: u.Vec2r) u.Vec2r, // you can return unused velocity (if scrolled to the edge)
     scroll_step: fn(cr: *Crosap, steps: u.Vec2i) ?u.Vec2i, // null means this element does not benefit from discrete scrolling, then a normal scroll event is simulated.
     
     pub fn Interface(Imp: type) type {
@@ -28,8 +28,8 @@ pub const element = u.interface(struct {
                 s.imp.call(.pointer_start, .{info});
             }
             
-            pub fn scroll_end(s: Selfp, cr: *Crosap, velocity: u.Vec2r) void {
-                s.imp.call(.scroll_end, .{cr, velocity});
+            pub fn scroll_end(s: Selfp, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
+                return s.imp.call(.scroll_end, .{cr, velocity});
             }
             
             pub fn scroll_step(s: Selfp, cr: *Crosap, steps: u.Vec2i) ?u.Vec2i {
@@ -221,12 +221,12 @@ pub fn create_flexible_element(Element: type) fn(el: *Element) element.Dynamic_i
     }.f;
 }
 
-pub fn element_no_scroll_end(Element: type) fn(el: *Element, cr: *Crosap, velocity: u.Vec2r) void {
+pub fn element_no_scroll_end(Element: type) fn(el: *Element, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
     return struct {
-        pub fn f(el: *Element, cr: *Crosap, velocity: u.Vec2r) void {
+        pub fn f(el: *Element, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
             _ = el;
             _ = cr;
-            _ = velocity;
+            return velocity;
         }
     }.f;
 }

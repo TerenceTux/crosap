@@ -48,13 +48,14 @@ pub const Crosap = struct {
         cr.to_scroll.deinit();
     }
     
-    pub fn new_frame(cr: *Crosap) ?Draw_context {
+    pub fn new_frame(cr: *Crosap, dtime: u.Real) ?Draw_context {
         cr.update_imagemap(&cr.general);
         if (cr.backend.new_frame()) |frame_size| {
             return .{
                 .area = .create(.zero, frame_size),
                 .mask = .create(.zero, frame_size),
                 .cr = cr,
+                .dtime = dtime,
             };
         } else {
             return null;
