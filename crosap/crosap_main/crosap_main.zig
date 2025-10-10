@@ -25,6 +25,7 @@ pub const Crosap_main = struct {
     last_update: u.Real,
     activity: activity.Dynamic_interface,
     pointers: u.Map(*const Pointer, Pointer_info),
+    scroll_movements: u.List(Scroll_movement),
     
     pub fn init(main: *Crosap_main) void {
         u.init();
@@ -41,6 +42,7 @@ pub const Crosap_main = struct {
         u.log(.{"Built for ",@tagName(builtin.cpu.arch)," (", @sizeOf(usize)*8, " bit ",builtin.cpu.arch.endian()," endian)"});
         
         main.pointers.init_with_capacity(4);
+        main.scroll_movements.init_with_capacity(4);
         
         u.log_start(.{"Crosap init"});
         main.cr.init();
@@ -61,6 +63,10 @@ pub const Crosap_main = struct {
             main.pointer_stop(entry.key);
         }
         
+        for (main.scroll_movements.items_mut()) |*scroll_movement| {
+            scroll_movement.scroll_chain.deinit();
+        }
+        
         u.log_start(.{"App deinit"});
         main.activity.deinit(&main.cr);
         main.activity.free();
@@ -70,6 +76,7 @@ pub const Crosap_main = struct {
         main.cr.deinit();
         u.log_end(.{"Crosap deinit"});
         
+        main.scroll_movements.deinit();
         main.pointers.deinit();
         
         u.deinit();
@@ -95,7 +102,38 @@ pub const Crosap_main = struct {
         u.log_start(.{"Frame update"});
         const dtime = now.subtract(main.last_update);
         main.last_update = now;
-        u.log_start(.{"Stepping ",dtime," ms"});
+        
+        var movement_index = main.scroll_movements.count;
+        while (movement_index > 0) {
+            movement_index -= 1;
+            const movement = main.scroll_movements.get_mut(movement_index);
+            const old_pos = movement.current.round_to_vec2i();
+            u.math.move_smooth_to2(&movement.current, &movement.speed, movement.target, dtime, .from_float(4096));
+            const new_pos = movement.current.round_to_vec2i();
+            const moved = old_pos.offset_to(new_pos);
+            main.add_scroll_to_scroll_chain(movement.scroll_chain.items(), moved);
+            if (u.all(&.{
+                movement.current.distance_squared(movement.target).lower_or_equal(.from_float(0.01)),
+                movement.speed.length_squared().lower_or_equal(.from_float(0.01))
+            })) {
+                movement.scroll_chain.deinit();
+                if (movement.pointer) |pointer| {
+                    const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+                    pointer_info.scroll_movement = null;
+                }
+                if (movement_index != main.scroll_movements.count - 1) {
+                    movement.* = main.scroll_movements.get(main.scroll_movements.count - 1);
+                    // direct the pointer that this scroll movement belongs to, to the new index, since we moved it
+                    if (movement.pointer) |pointer| {
+                        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+                        pointer_info.scroll_movement = movement_index;
+                    }
+                }
+                main.scroll_movements.remove_count(1);
+            }
+        }
+        
+        u.log_start(.{"Stepping ",dtime," s"});
         const root_element = main.activity.root_element(&main.cr);
         u.log_end(.{"Stepping"});
         
@@ -130,6 +168,7 @@ pub const Crosap_main = struct {
             .button_left = pointer.button_left,
             .button_right = pointer.button_right,
             .button_middle = pointer.button_middle,
+            .scroll_movement = null,
             .start_time = undefined,
             .scroll_chain = .create_with_capacity(8),
             .moved = undefined,
@@ -213,32 +252,7 @@ pub const Crosap_main = struct {
                         click_handler.cancel();
                         pointer_info.click_handler = null;
                     }
-                    const scroll_chain_count = pointer_info.scroll_chain.count;
-                    for (0..scroll_chain_count) |index| {
-                        const element = pointer_info.scroll_chain.get(index).to_element();
-                        var next: ?Dynamic_element = null;
-                        if (index + 1 < scroll_chain_count) {
-                            next = pointer_info.scroll_chain.get(index + 1).to_element();
-                        }
-                        const gop = main.cr.to_scroll.get_or_put(element);
-                        if (index == 0) {
-                            if (gop.new) {
-                                gop.value.* = .{
-                                    .amount = scrolled,
-                                    .otherwise = next,
-                                };
-                            } else {
-                                gop.value.amount.mut_add(scrolled);
-                            }
-                        } else {
-                            if (gop.new) {
-                                gop.value.* = .{
-                                    .amount = .zero,
-                                    .otherwise = next,
-                                };
-                            }
-                        }
-                    }
+                    main.add_scroll_to_scroll_chain(pointer_info.scroll_chain.items(), scrolled);
                 }
                 pointer_info.moved = moved;
             }
@@ -248,7 +262,36 @@ pub const Crosap_main = struct {
         u.log_end(.{"Pointer update handled"});
     }
     
-    pub fn emit_long_click(main: *Crosap_main, pos: u.Vec2i) void {
+    fn add_scroll_to_scroll_chain(main: *Crosap_main, scroll_chain: []const ui.Dynamic_element, scroll: u.Vec2i) void {
+        const scroll_chain_count = scroll_chain.len;
+        for (0..scroll_chain_count) |index| {
+            const element = scroll_chain[index].to_element();
+            var next: ?Dynamic_element = null;
+            if (index + 1 < scroll_chain_count) {
+                next = scroll_chain[index + 1].to_element();
+            }
+            const gop = main.cr.to_scroll.get_or_put(element);
+            if (index == 0) {
+                if (gop.new) {
+                    gop.value.* = .{
+                        .amount = scroll,
+                        .otherwise = next,
+                    };
+                } else {
+                    gop.value.amount.mut_add(scroll);
+                }
+            } else {
+                if (gop.new) {
+                    gop.value.* = .{
+                        .amount = .zero,
+                        .otherwise = next,
+                    };
+                }
+            }
+        }
+    }
+    
+    fn emit_long_click(main: *Crosap_main, pos: u.Vec2i) void {
         var click_handler: ?ui.click_handler.Dynamic_interface = null;
         const pointer_context = ui.Pointer_context {
             .cr = &main.cr,
@@ -267,8 +310,34 @@ pub const Crosap_main = struct {
     pub fn pointer_scroll(main: *Crosap_main, pointer: *const Pointer, offset: u.Vec2r) void {
         u.log_start(.{"Pointer ",@intFromPtr(pointer)," scroll: ",offset});
         pointer.log_state();
-        // TODO
-        _ = main;
+        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+        const scroll_amount = offset.scale(.from_int(16));
+        if (pointer_info.scroll_movement) |movement_index| {
+            const movement = main.scroll_movements.get_mut(movement_index);
+            const distance = movement.current.offset_to(movement.target).length();
+            const factor = u.Real.from_int(1).add(distance.multiply(u.Real.from_int(1024).inverse()));
+            movement.target.mut_add(scroll_amount.scale(factor));
+        } else {
+            var scroll_chain = u.List(ui.Dynamic_element).create();
+            const pointer_context = ui.Pointer_context {
+                .cr = &main.cr,
+                .pos = main.cr.pixel_to_position(pointer_info.position),
+                .scroll_chain = &scroll_chain,
+                .click_handler = null,
+            };
+            const root_element = main.activity.root_element(&main.cr);
+            const element = root_element.get_element();
+            element.pointer_start(pointer_context);
+            const index = main.scroll_movements.count;
+            main.scroll_movements.append(.{
+                .current = .zero,
+                .target = scroll_amount,
+                .speed = .zero,
+                .pointer = pointer,
+                .scroll_chain = scroll_chain,
+            });
+            pointer_info.scroll_movement = index;
+        }
         u.log_end(.{"Pointer scroll handled"});
         
     }
@@ -282,6 +351,10 @@ pub const Crosap_main = struct {
                 click_handler.cancel();
             }
         }
+        if (pointer_info.scroll_movement) |movement_index| {
+            const movement = main.scroll_movements.get_mut(movement_index);
+            movement.pointer = null;
+        }
         pointer_info.scroll_chain.deinit();
         main.pointers.remove(pointer) catch unreachable;
         u.log_end(.{"Pointer disappear handled"});
@@ -294,6 +367,7 @@ const Pointer_info = struct {
     button_left: bool,
     button_right: bool,
     button_middle: bool,
+    scroll_movement: ?usize, // index in main.scroll_movements
     active: bool, // when active, button_left must be pressed, but after a long press active is false
     
     scroll_chain: u.List(ui.Dynamic_element), // inner element comes first. always a valid list, but only used when active
@@ -301,6 +375,14 @@ const Pointer_info = struct {
     start_time: u64,
     moved: u.Vec2r, // always between (-1, -1) and (1, 1). This is the build-up offset in logical position.
     click_handler: ?ui.click_handler.Dynamic_interface, // canceled and set to null after dragging
+};
+
+const Scroll_movement = struct {
+    current: u.Vec2r,
+    target: u.Vec2r,
+    speed: u.Vec2r,
+    pointer: ?*const Pointer, // null when pointer disappeared before the animation completed
+    scroll_chain: u.List(ui.Dynamic_element), // inner element comes first
 };
 
 

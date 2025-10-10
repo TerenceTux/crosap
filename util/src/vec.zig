@@ -128,16 +128,20 @@ pub const Vec2r = struct {
         return .create(v.x.multiply(f), v.y.multiply(f));
     }
     
+    pub fn scale_down(v: Vec2r, f: u.Real) Vec2r {
+        return v.scale(f.inverse());
+    }
+    
     pub fn round_to_vec2i(v: Vec2r) Vec2i {
         return .create(v.x.int_round(), v.y.int_round());
     }
     
-    pub fn from_angle(angle: u.Real, length: u.Real) Vec2r {
+    pub fn from_angle(angle: u.Real, v_length: u.Real) Vec2r {
         const angle_pi = angle.to_float(f32) * (std.math.pi * 2);
         const x = @sin(angle_pi);
         const y = -@cos(angle_pi);
         const norm = create(.from_float(x), .from_float(y));
-        return norm.scale(length);
+        return norm.scale(v_length);
     }
     
     // to unit
@@ -162,13 +166,26 @@ pub const Vec2r = struct {
         return v.map_from_rect(from).map_to_rect(to);
     }
     
+    // only works for small vectors
     pub fn distance_squared(v1: Vec2r, v2: Vec2r) u.Real {
         const diff = v2.subtract(v1);
-        return diff.x.multiply(diff.x).add(diff.y.multiply(diff.y));
+        return diff.length_squared();
     }
     
     pub fn distance(v1: Vec2r, v2: Vec2r) u.Real {
-        return v1.distance_squared(v2).square_root();
+        return v2.subtract(v1).length();
+    }
+    
+    // only works for small vectors
+    pub fn length_squared(v: Vec2r) u.Real {
+        return v.x.multiply(v.x).add(v.y.multiply(v.y));
+    }
+    
+    pub fn length(v: Vec2r) u.Real {
+        const x = v.x.to_float(f64);
+        const y = v.y.to_float(f64);
+        const squared = x * x + y * y;
+        return .from_float(@sqrt(squared));
     }
     
     pub fn area(v: Vec2r) u.Real {

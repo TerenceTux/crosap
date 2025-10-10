@@ -47,6 +47,7 @@ pub const Draw_point = @import("drawing.zig").Point;
 pub const option = @import("options.zig");
 pub const types = @import("types.zig");
 pub const serialize = @import("serialize.zig");
+pub const math = @import("math.zig");
 
 pub const event = @import("event.zig");
 
@@ -163,7 +164,6 @@ pub fn deinit() void {
     alloc_interface.deinit();
 }
 
-// nanoseconds
 pub fn time_nanoseconds() u64 {
     const now = std.time.Instant.now() catch @panic("no timer available");
     return now.since(start_time);
@@ -171,7 +171,7 @@ pub fn time_nanoseconds() u64 {
 
 pub fn time_seconds() Real {
     const nanoseconds = time_nanoseconds();
-    const seconds = @as(f64, @floatFromInt(nanoseconds)) / 1000_000;
+    const seconds = @as(f64, @floatFromInt(nanoseconds)) / 1000_000_000;
     return .from_float(seconds);
 }
 

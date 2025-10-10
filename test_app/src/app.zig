@@ -181,7 +181,7 @@ pub const Test_element = struct {
         _ = size;
     }
     
-    const grid_size = u.Int.create(32);
+    const grid_size = u.Int.create(64);
     const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
     pub fn frame(el: *Test_element, draw: Draw_context) void {
         if (draw.cr.get_scroll(ui.element.dynamic(el))) |scroll| {

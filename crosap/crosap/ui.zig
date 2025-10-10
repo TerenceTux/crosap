@@ -43,7 +43,7 @@ pub const Pointer_context = struct {
     cr: *Crosap,
     pos: u.Vec2i,
     scroll_chain: ?*u.List(Dynamic_element),
-    click_handler: *?click_handler.Dynamic_interface,
+    click_handler: ?*?click_handler.Dynamic_interface,
     
     pub fn add_for_scrolling(context: *const Pointer_context, el: element.Dynamic_interface) void {
         if (context.scroll_chain) |scroll_chain| {
@@ -52,17 +52,19 @@ pub const Pointer_context = struct {
     }
     
     pub fn create_click_handler(context: *const Pointer_context) ?*click_handler.Dynamic_interface {
-        if (context.click_handler.* == null) {
-            context.click_handler.* = @as(click_handler.Dynamic_interface, undefined);
-            return &context.click_handler.*.?;
-        } else {
-            return null;
+        if (context.click_handler) |stored_handler| {
+            if (stored_handler.* == null) {
+                stored_handler.* = @as(click_handler.Dynamic_interface, undefined);
+                return &stored_handler.*.?;
+            }
         }
+        return null;
     }
     
+    // It's better to use `create_click_handler`
     pub fn add_click_handler_or_cancel(context: *const Pointer_context, handler: click_handler.Dynamic_interface) void {
-        if (context.click_handler.* == null) {
-            context.click_handler.* = handler;
+        if (context.create_click_handler()) |new_handler| {
+            new_handler.* = handler;
         } else {
             handler.cancel();
         }
