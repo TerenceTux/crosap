@@ -291,14 +291,14 @@ pub const Backend = struct {
     }
     
     fn call(b: *Backend, comptime function: @Type(.enum_literal), args: Arguments_of_function(function)) Return_for_call(function) {
-        u.log_start(.{"Backend function ",function," called"});
+        //u.log_start(.{"Backend function ",function," called"});
         if (@typeInfo(Return_of_function(function)) == .error_union) {
             while (true) {
                 if (b.variant_call(function, args)) |ret_val| {
-                    u.log_end(.{});
+                    //u.log_end(.{});
                     return ret_val;
-                } else |err| {
-                    u.log_end(.{"This function failed on ",b.current_variant," with error: ",err});
+                } else |_| {
+                    //u.log_end(.{"This function failed on ",b.current_variant," with error: ",err});
                     b.deinit_for_switch();
                     while (true) {
                         if (b.switch_variant()) {
@@ -311,7 +311,7 @@ pub const Backend = struct {
             }
         } else { // function can't fail
             const ret_val = b.variant_call(function, args);
-            u.log_end(.{});
+            //u.log_end(.{});
             return ret_val;
         }
     }

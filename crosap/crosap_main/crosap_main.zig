@@ -185,19 +185,15 @@ pub const Crosap_main = struct {
     pub fn pointer_start(main: *Crosap_main, pointer: *const Pointer) void {
         u.log_start(.{"New pointer ",@intFromPtr(pointer)});
         pointer.log_state();
-        const pointer_moment = Pointer_moment {
-            .pos = pointer.position,
-            .time = u.time_seconds(),
-        };
         const pointer_info = Pointer_info {
             .position = pointer.position,
             .scroll_movement = null,
             .button_left = pointer.button_left,
             .button_right = pointer.button_right,
             .button_middle = pointer.button_middle,
-            .previous2 = pointer_moment,
-            .previous1 = pointer_moment,
             .active = false,
+            .previous2 = undefined,
+            .previous1 = undefined,
             .start_time = undefined,
             .scroll_chain = .create_with_capacity(8),
             .moved = undefined,
@@ -215,7 +211,13 @@ pub const Crosap_main = struct {
         if (pointer.button_left != pointer_info.button_left) {
             pointer_info.button_left = pointer.button_left;
             if (pointer.button_left and !pointer_info.button_right and !pointer_info.button_middle) {
+                const pointer_moment = Pointer_moment {
+                    .pos = pointer.position,
+                    .time = u.time_seconds(),
+                };
                 pointer_info.active = true;
+                pointer_info.previous2 = pointer_moment;
+                pointer_info.previous1 = pointer_moment;
                 pointer_info.start_time = u.time_seconds();
                 pointer_info.moved = .zero;
                 pointer_info.scroll_chain.clear();
@@ -270,20 +272,20 @@ pub const Crosap_main = struct {
                 
                 if (moved.x.higher_or_equal(.from_int(1))) {
                     const steps = moved.x.int_floor();
-                    scrolled.x = scrolled.x.add(steps);
+                    scrolled.x = scrolled.x.subtract(steps);
                     moved.x = moved.x.subtract(steps.to_real());
                 } else if (moved.x.lower_or_equal(.from_int(-1))) {
                     const steps = moved.x.negate().int_floor();
-                    scrolled.x = scrolled.x.subtract(steps);
+                    scrolled.x = scrolled.x.add(steps);
                     moved.x = moved.x.add(steps.to_real());
                 }
                 if (moved.y.higher_or_equal(.from_int(1))) {
                     const steps = moved.y.int_floor();
-                    scrolled.y = scrolled.y.add(steps);
+                    scrolled.y = scrolled.y.subtract(steps);
                     moved.y = moved.y.subtract(steps.to_real());
                 } else if (moved.y.lower_or_equal(.from_int(-1))) {
                     const steps = moved.y.negate().int_floor();
-                    scrolled.y = scrolled.y.subtract(steps);
+                    scrolled.y = scrolled.y.add(steps);
                     moved.y = moved.y.add(steps.to_real());
                 }
                 
@@ -351,7 +353,7 @@ pub const Crosap_main = struct {
         u.log_start(.{"Pointer ",@intFromPtr(pointer)," scroll: ",offset});
         pointer.log_state();
         const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
-        const scroll_amount = offset.scale(.from_int(16));
+        const scroll_amount = offset.scale(.from_int(-16));
         if (pointer_info.scroll_movement) |movement_index| {
             const movement = main.scroll_movements.get_mut(movement_index);
             const distance = movement.current.offset_to(movement.target).length();

@@ -142,7 +142,7 @@ pub fn interface(info: type) type {
         pub fn dynamic(imp: anytype) info.Interface(Dynamic) {
             const Type = switch (@typeInfo(@TypeOf(imp))) {
                 .pointer => |pointer_info| pointer_info.child,
-                else => @compileError("You must pass a pointer to dynamic(), got "++@typeName(imp)),
+                else => @compileError("You must pass a pointer to dynamic(), got "++@typeName(@TypeOf(imp))),
             };
             const call_layer = Dynamic {
                 .imp = imp,

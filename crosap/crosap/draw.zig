@@ -552,8 +552,8 @@ const Solid_image = struct {
 
 
 pub const Draw_context = struct {
-    area: u.Rect2i,
-    mask: u.Rect2i,
+    area: u.Rect2i, // currently in pixels
+    mask: u.Rect2i, // currently in pixels
     cr: *Crosap,
     dtime: u.Real,
     
@@ -645,6 +645,22 @@ pub const Draw_context = struct {
     pub fn rect(draw_context: *const Draw_context, context_rect: u.Rect2i, color: u.Screen_color) void {
         const t_image = draw_context.cr.general.get(.solid);
         draw_context.repeated_color(context_rect, t_image, color);
+    }
+    
+    pub fn sub(draw_context: *const Draw_context, new_rect: u.Rect2i, mask: u.Rect2i) Draw_context {
+        const new_mask = u.Rect2i.create(
+            draw_context.area.offset.add(mask.offset.scale_up(draw_context.cr.scale)),
+            mask.size.scale_up(draw_context.cr.scale),
+        );
+        return .{
+            .area = .create(
+                draw_context.area.offset.add(new_rect.offset.scale_up(draw_context.cr.scale)),
+                new_rect.size.scale_up(draw_context.cr.scale),
+            ),
+            .mask = draw_context.mask.intersection(new_mask) orelse .create(.zero, .zero),
+            .cr = draw_context.cr,
+            .dtime = draw_context.dtime,
+        };
     }
 };
 

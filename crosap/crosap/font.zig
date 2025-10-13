@@ -327,12 +327,18 @@ fn Character(Drawing: type) type {
             return Drawing.height;
         }
         
+        pub fn height_offset(image: *Self) u.Int {
+            _ = image;
+            return ch_height().offset().int_round();
+            
+        }
+        
         pub fn create(width: u.Real) Self {
             return .{
                 .width = width,
                 .optimal_pos = undefined,
             };
-        } 
+        }
         
         pub fn size(image: *Self) u.Vec2i {
             _ = image;

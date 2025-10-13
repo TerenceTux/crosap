@@ -3,6 +3,18 @@ const u = @import("util");
 const Draw_context = @import("draw.zig").Draw_context;
 const Crosap = @import("crosap.zig").Crosap;
 
+pub const X_align = enum {
+    left,
+    center,
+    right,
+};
+
+pub const Y_align = enum {
+    top,
+    center,
+    bottom,
+};
+
 pub const element = u.interface(struct {
     deinit: fn(cr: *Crosap) void,
     // when this is called, the position is known, so you can get the scroll offset
@@ -67,6 +79,19 @@ pub const Pointer_context = struct {
             new_handler.* = handler;
         } else {
             handler.cancel();
+        }
+    }
+    
+    pub fn sub(context: *const Pointer_context, rect: u.Rect2i) ?Pointer_context {
+        if (rect.includes(context.pos)) {
+            return .{
+                .cr = context.cr,
+                .pos = context.pos.subtract(rect.offset),
+                .scroll_chain = context.scroll_chain,
+                .click_handler = context.click_handler,
+            };
+        } else {
+            return null;
         }
     }
 };
@@ -221,6 +246,30 @@ pub fn create_flexible_element(Element: type) fn(el: *Element) element.Dynamic_i
     }.f;
 }
 
+pub fn create_x_flex_element(Element: type) fn(el: *Element) element.Dynamic_interface {
+    return struct {
+        pub fn f(el: *Element) element.Dynamic_interface {
+            return element.dynamic(el);
+        }
+    }.f;
+}
+
+pub fn create_y_flex_element(Element: type) fn(el: *Element) element.Dynamic_interface {
+    return struct {
+        pub fn f(el: *Element) element.Dynamic_interface {
+            return element.dynamic(el);
+        }
+    }.f;
+}
+
+pub fn create_fixed_element(Element: type) fn(el: *Element) element.Dynamic_interface {
+    return struct {
+        pub fn f(el: *Element) element.Dynamic_interface {
+            return element.dynamic(el);
+        }
+    }.f;
+}
+
 pub fn element_no_scroll_end(Element: type) fn(el: *Element, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
     return struct {
         pub fn f(el: *Element, cr: *Crosap, velocity: u.Vec2r) u.Vec2r {
@@ -274,3 +323,15 @@ pub const Plain_color = struct {
     pub const scroll_end = element_no_scroll_end(Plain_color);
     pub const scroll_step = element_no_scroll_step(Plain_color);
 };
+
+pub const Simple_text = @import("text.zig").Simple_text;
+pub const Overflow_text = @import("text.zig").Overflow_text;
+const scrolling = @import("scrolling.zig");
+pub const auto_velocity_update = scrolling.auto_velocity_update;
+pub const Scroll_state = scrolling.Scroll_state;
+pub const Scroll_state_2d = scrolling.Scroll_state_2d;
+pub const Scroll_container = scrolling.Scroll_container;
+pub const Y_scroll_fixed = scrolling.Y_scroll_fixed;
+pub const X_scroll_fixed = scrolling.X_scroll_fixed;
+pub const Y_scroll = scrolling.Y_scroll;
+pub const X_scroll = scrolling.X_scroll;

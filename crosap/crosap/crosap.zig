@@ -123,6 +123,15 @@ pub const Crosap = struct {
         }
     }
     
+    // only call if `get_scroll` did not return null
+    pub fn return_scroll(cr: *Crosap, element: Dynamic_element, amount: u.Vec2i) void {
+        const scroll_info = cr.to_scroll.get_ptr(element).?;
+        if (scroll_info.otherwise) |to_el| {
+            const to_scroll_info = cr.to_scroll.get_ptr(to_el).?;
+            to_scroll_info.amount.mut_add(amount);
+        }
+    }
+    
     pub fn pixel_to_position(cr: *Crosap, pixel: u.Vec2r) u.Vec2i {
         const exact = cr.pixel_to_position_exact(pixel);
         return .create(

@@ -345,7 +345,7 @@ pub fn Backend(render_type: Render_type) type {
                         };
                     },
                     .mouse_button_middle => |state| {
-                        b.mouse.button_left = state;
+                        b.mouse.button_middle = state;
                         return Event {
                             .pointer_update = .{
                                 .pointer = &b.mouse,

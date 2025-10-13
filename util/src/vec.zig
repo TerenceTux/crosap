@@ -368,6 +368,15 @@ pub const Rect2i = struct {
         }
     }
     
+    pub fn includes(rect: Rect2i, point: Vec2i) bool {
+        return u.all(&.{
+            point.x.higher_or_equal(rect.left()),
+            point.x.lower_or_equal(rect.right()),
+            point.y.higher_or_equal(rect.top()),
+            point.y.lower_or_equal(rect.bottom()),
+        });
+    }
+    
     pub fn equal(r1: Rect2i, r2: Rect2i) bool {
         return r1.offset.equal(r2.offset) and r1.size.equal(r2.size);
     }

@@ -163,6 +163,9 @@ const Main_activity = struct {
 pub const Test_element = struct {
     pub const get_element = ui.create_flexible_element(Test_element);
     color: u.Screen_color,
+    text1_scroll: ui.Y_scroll,
+    text1: ui.Overflow_text,
+    text2: ui.Simple_text,
     scroll_offset: u.Vec2i,
     auto_buildup: u.Vec2r,
     auto_velocity: u.Vec2r,
@@ -171,19 +174,34 @@ pub const Test_element = struct {
     
     pub fn init(el: *Test_element, color: u.Color) void {
         el.color = color.to_screen_color();
+        el.text1.init(
+            \\Dit is een erg lange regel die opgesplitst moet worden in meerdere regels omdat het niet in dit kleine vakje past.
+            \\Woorden worden bij voorkeur niet afgebroken omdat je dan niet zou weten of het twee verschillende woorden zijn.
+            \\Toch zullen hele lange woorden zoals aansprakelijkheidswaardevaststellingsveranderingen en meervoudigepersoonlijkheidsstoornis wel tussendoor worden afgebroken.
+            \\
+            \\BEGINLETTER PANGRAM:
+            \\Alle beroemde circusartiesten deden even fantastische, gekke, heldhaftige, ingewikkelde judoachtige kunstjes, lenig maar niet onvoorzichtig; prachtig qua ritme speelden trompettisten, uniform vibreerden warme xylofoonklanken; ijskoninginnen zongen.
+            \\
+            \\Lorem ipsum dolor sit amet. Eos perspiciatis quia ab aliquam quod ut provident inventore sit quis culpa. Non necessitatibus quam aut quia natus vel internos nemo id dolore itaque eos deleniti incidunt qui dolor rerum. Et placeat impedit aut eius consequuntur eum voluptatum omnis non recusandae eaque id voluptatibus rerum ut illo quia sit alias labore? Rem sunt provident et omnis commodi eos libero galisum ut eveniet esse.
+        , .left);
+        el.text1_scroll.init(ui.x_flex_element.dynamic(&el.text1));
+        el.text2.init("Dit is een tekst met een geweldig lettertype\nen een nieuwe regel.", .center);
         el.scroll_offset = .zero;
         el.auto_buildup = .zero;
         el.auto_velocity = .zero;
     }
     
     pub fn deinit(el: *Test_element) void {
-        _ = el;
+        el.text1.deinit();
+        el.text2.deinit();
     }
     
-    pub fn update(el: *Test_element, cr: *Crosap, dtime: u.Int, size: u.Vec2i) void {
-        _ = el;
-        _ = cr;
-        _ = dtime;
+    pub fn update(el: *Test_element, cr: *Crosap, dtime: u.Real, size: u.Vec2i) void {
+        el.text1_scroll.update(cr, dtime, .create(
+            grid_size.subtract(.one),
+            grid_size.subtract(.one),
+        ));
+        el.text2.update(cr, dtime);
         _ = size;
     }
     
@@ -191,8 +209,7 @@ pub const Test_element = struct {
     const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
     pub fn frame(el: *Test_element, draw: Draw_context) void {
         if (draw.cr.get_scroll(ui.element.dynamic(el))) |scroll| {
-            el.scroll_offset.mut_add_bounded(scroll);
-            u.log(.{"New scroll offset: ",el.scroll_offset});
+            el.scroll_offset.mut_subtract_bounded(scroll);
         } else {
             const start_velocity = el.auto_velocity;
             const velocity_length = start_velocity.length();
@@ -213,7 +230,7 @@ pub const Test_element = struct {
                 el.auto_buildup.mut_add(moved);
                 const moved_dots = el.auto_buildup.round_to_vec2i();
                 el.auto_buildup.mut_subtract(moved_dots.to_vec2r());
-                el.scroll_offset.mut_add_bounded(moved_dots);
+                el.scroll_offset.mut_subtract_bounded(moved_dots);
             }
         }
         
@@ -236,9 +253,37 @@ pub const Test_element = struct {
                 .create(.one, draw.size().y),
             ), grid_color);
         }
+        
+        const text1_el = el.text1_scroll.get_element();
+        const text1_rect = u.Rect2i.create(
+            el.scroll_offset.add(.create(.one, .one)),
+            .create(
+                grid_size.subtract(.one),
+                grid_size.subtract(.one),
+            ),
+        );
+        text1_el.frame(draw.sub(text1_rect, text1_rect));
+        
+        const text2_el = el.text2.get_element();
+        const text2_rect = u.Rect2i.create(
+            el.scroll_offset.move_right(grid_size),
+            el.text2.get_size(draw.cr),
+        );
+        text2_el.frame(draw.sub(text2_rect, text2_rect));
     }
     
     pub fn pointer_start(el: *Test_element, info: ui.Pointer_context) void {
+        const text1_rect = u.Rect2i.create(
+            el.scroll_offset.add(.create(.one, .one)),
+            .create(
+                grid_size.subtract(.one),
+                grid_size.subtract(.one),
+            ),
+        );
+        if (info.sub(text1_rect)) |child_info| {
+            const text1_el = el.text1_scroll.get_element();
+            text1_el.pointer_start(child_info);
+        }
         if (info.create_click_handler()) |click_handler| {
             click_handler.* = ui.click_handler.dynamic(Click_handler.create(el, info.pos));
         }
