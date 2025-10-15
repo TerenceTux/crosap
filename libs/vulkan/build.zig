@@ -2,6 +2,9 @@ const std = @import("std");
 
 
 pub fn build(b: *std.Build) void {
+    _ = b.option(std.Target.Os.Tag, "os", "The operating system to target") orelse b.resolveTargetQuery(.{}).result.os.tag;
+    _ = b.option(std.Target.Cpu.Arch, "arch", "The architecture to target");
+    _ = b.option(bool, "release", "Compile with optimizations") orelse false;
     const util = b.dependency("util", .{}).module("util");
     
     const binding_generator = b.addExecutable(.{

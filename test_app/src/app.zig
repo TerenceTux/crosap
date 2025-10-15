@@ -166,9 +166,10 @@ pub const Test_element = struct {
     text1_scroll: ui.Y_scroll,
     text1: ui.Overflow_text,
     text2: ui.Simple_text,
-    scroll_offset: u.Vec2i,
+    scroll_center: u.Vec2i,
     auto_buildup: u.Vec2r,
     auto_velocity: u.Vec2r,
+    size: u.Vec2i,
     
     const auto_slow_down = u.Real.from_int(1024);
     
@@ -186,9 +187,10 @@ pub const Test_element = struct {
         , .left);
         el.text1_scroll.init(ui.x_flex_element.dynamic(&el.text1));
         el.text2.init("Dit is een tekst met een geweldig lettertype\nen een nieuwe regel.", .center);
-        el.scroll_offset = .zero;
+        el.scroll_center = .zero;
         el.auto_buildup = .zero;
         el.auto_velocity = .zero;
+        el.size = .zero;
     }
     
     pub fn deinit(el: *Test_element) void {
@@ -196,48 +198,54 @@ pub const Test_element = struct {
         el.text2.deinit();
     }
     
+    fn scroll_offset(el: *Test_element) u.Vec2i {
+        u.log(.{"Center: ",el.scroll_center});
+        u.log(.{"Offset: ",el.size.scale_down(.create(2)).subtract(el.scroll_center)});
+        return el.size.scale_down(.create(2)).subtract(el.scroll_center);
+    }
+    
     pub fn update(el: *Test_element, cr: *Crosap, dtime: u.Real, size: u.Vec2i) void {
+        el.size = size;
         el.text1_scroll.update(cr, dtime, .create(
             grid_size.subtract(.one),
             grid_size.subtract(.one),
         ));
         el.text2.update(cr, dtime);
-        _ = size;
-    }
-    
-    const grid_size = u.Int.create(64);
-    const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
-    pub fn frame(el: *Test_element, draw: Draw_context) void {
-        if (draw.cr.get_scroll(ui.element.dynamic(el))) |scroll| {
-            el.scroll_offset.mut_subtract_bounded(scroll);
+        
+        if (cr.get_scroll(ui.element.dynamic(el))) |scroll| {
+            el.scroll_center.mut_add_bounded(scroll);
         } else {
             const start_velocity = el.auto_velocity;
             const velocity_length = start_velocity.length();
             if (velocity_length.higher_than(.zero)){
                 const velocity_dir = start_velocity.scale_down(velocity_length);
                 const stop_time = velocity_length.divide(auto_slow_down);
-                var used_time = draw.dtime;
-                if (draw.dtime.higher_or_equal(stop_time)) {
+                var used_time = dtime;
+                if (dtime.higher_or_equal(stop_time)) {
                     // we stop this frame
                     used_time = stop_time;
                     el.auto_velocity = .zero;
                 } else {
-                    const new_velocity = velocity_length.subtract(draw.dtime.multiply(auto_slow_down));
+                    const new_velocity = velocity_length.subtract(dtime.multiply(auto_slow_down));
                     el.auto_velocity = velocity_dir.scale(new_velocity);
                 }
                 const avg_changing_velocity = start_velocity.add(el.auto_velocity).scale(.from_float(0.5));
-                const moved = avg_changing_velocity.scale(used_time).add(el.auto_velocity.scale(draw.dtime.subtract(used_time)));
+                const moved = avg_changing_velocity.scale(used_time).add(el.auto_velocity.scale(dtime.subtract(used_time)));
                 el.auto_buildup.mut_add(moved);
                 const moved_dots = el.auto_buildup.round_to_vec2i();
                 el.auto_buildup.mut_subtract(moved_dots.to_vec2r());
-                el.scroll_offset.mut_subtract_bounded(moved_dots);
+                el.scroll_center.mut_add_bounded(moved_dots);
             }
         }
-        
+    }
+    
+    const grid_size = u.Int.create(64);
+    const grid_color = u.Color.from_byte_rgb(255, 255, 255).to_screen_color();
+    pub fn frame(el: *Test_element, draw: Draw_context) void {
         draw.rect(draw.area, el.color);
         
         // horizontal lines
-        var current_y = el.scroll_offset.y.mod(grid_size);
+        var current_y = el.scroll_offset().y.mod(grid_size);
         while (current_y.lower_than(draw.size().y)) : (current_y = current_y.add(grid_size)) {
             draw.rect(.create(
                 .create(.zero, current_y),
@@ -246,7 +254,7 @@ pub const Test_element = struct {
         }
         
         // vertical lines
-        var current_x = el.scroll_offset.x.mod(grid_size);
+        var current_x = el.scroll_offset().x.mod(grid_size);
         while (current_x.lower_than(draw.size().x)) : (current_x = current_x.add(grid_size)) {
             draw.rect(.create(
                 .create(current_x, .zero),
@@ -256,7 +264,7 @@ pub const Test_element = struct {
         
         const text1_el = el.text1_scroll.get_element();
         const text1_rect = u.Rect2i.create(
-            el.scroll_offset.add(.create(.one, .one)),
+            el.scroll_offset().add(.create(.one, .one)),
             .create(
                 grid_size.subtract(.one),
                 grid_size.subtract(.one),
@@ -266,7 +274,7 @@ pub const Test_element = struct {
         
         const text2_el = el.text2.get_element();
         const text2_rect = u.Rect2i.create(
-            el.scroll_offset.move_right(grid_size),
+            el.scroll_offset().move_right(grid_size),
             el.text2.get_size(draw.cr),
         );
         text2_el.frame(draw.sub(text2_rect, text2_rect));
@@ -274,7 +282,7 @@ pub const Test_element = struct {
     
     pub fn pointer_start(el: *Test_element, info: ui.Pointer_context) void {
         const text1_rect = u.Rect2i.create(
-            el.scroll_offset.add(.create(.one, .one)),
+            el.scroll_offset().add(.create(.one, .one)),
             .create(
                 grid_size.subtract(.one),
                 grid_size.subtract(.one),

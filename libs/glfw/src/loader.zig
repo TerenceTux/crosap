@@ -3,6 +3,8 @@ const std = @import("std");
 const types = @import("types.zig");
 const Window = @import("main.zig").Window;
 const vulkan = @import("vulkan");
+const static_linked = @import("options").static_linked;
+const glfw_c = @import("glfw_c");
 
 const lib_paths = [_][]const u8 {
     "/usr/lib/libglfw.so",
@@ -53,7 +55,7 @@ pub const Loader = struct {
         }
     };
     
-    dynlib: std.DynLib,
+    dynlib: if (static_linked) std.DynLib else void,
     version: Version,
     fns: struct {
         glfwInit: *const fn (
@@ -150,19 +152,28 @@ pub const Loader = struct {
     },
     
     pub fn init(loader: *Loader) !void {
-        u.log("Loading glfw libary");
-        loader.dynlib = try find_dynlib();
-        
-        u.log("Loading functions");
-        inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
-            const fn_type = @TypeOf(@field(loader.fns, field.name));
-            const fn_ptr = loader.dynlib.lookup(fn_type, field.name);
-            if (fn_ptr == null) {
-                u.log(.{"Error getting function ",field.name});
-                return error.function_not_available;
+        if (comptime static_linked) {
+            u.log("Loading static glfw functions");
+            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
+                const c_fn = &@field(glfw_c, field.name);
+                @field(loader.fns, field.name) = @ptrCast(c_fn);
             }
             
-            @field(loader.fns, field.name) = fn_ptr orelse unreachable;
+        } else {
+            u.log("Finding the dynamic glfw libary");
+            loader.dynlib = try find_dynlib();
+            
+            u.log("Loading functions");
+            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
+                const fn_type = @TypeOf(@field(loader.fns, field.name));
+                const fn_ptr = loader.dynlib.lookup(fn_type, field.name);
+                if (fn_ptr == null) {
+                    u.log(.{"Error getting function ",field.name});
+                    return error.function_not_available;
+                }
+                
+                @field(loader.fns, field.name) = fn_ptr orelse unreachable;
+            }
         }
         
         loader.version = loader.get_version();
@@ -199,7 +210,9 @@ pub const Loader = struct {
     
     pub fn deinit(loader: *Loader) void {
         loader.fns.glfwTerminate();
-        loader.dynlib.close();
+        if (comptime !static_linked) {
+            loader.dynlib.close();
+        }
     }
     
     const Glfw_errors = b: {

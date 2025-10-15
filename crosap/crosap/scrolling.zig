@@ -142,18 +142,19 @@ pub const Y_scroll = struct {
         el.height = size.y;
         el.child.update(cr, dtime, size.x);
         el.child_height = el.child.get_height(cr);
-    }
-    
-    pub fn frame(el: *Y_scroll, draw: Draw_context) void {
-        const scroll = draw.cr.get_scroll(el.get_element());
+        
+        const scroll = cr.get_scroll(el.get_element());
         var returning = if (scroll) |scrolled| u.Vec2i.create(scrolled.x, .zero) else u.Vec2i.zero;
         const scrolled_y = if (scroll) |scrolled| scrolled.y else null;
-        if (el.state.update(scrolled_y, el.child_height, el.height, draw.dtime)) |returned| {
+        if (el.state.update(scrolled_y, el.child_height, el.height, dtime)) |returned| {
             returning.mut_add(.create(.zero, returned));
         }
         if (!returning.equal(.zero)) {
-            draw.cr.return_scroll(el.get_element(), returning);
+            cr.return_scroll(el.get_element(), returning);
         }
+    }
+    
+    pub fn frame(el: *Y_scroll, draw: Draw_context) void {
         const child_offset = el.state.offset(el.height);
         const child_el = el.child.get_element();
         child_el.frame(draw.sub(

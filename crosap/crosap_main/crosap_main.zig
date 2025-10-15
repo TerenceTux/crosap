@@ -91,7 +91,7 @@ pub const Crosap_main = struct {
             const pointer_info = entry.value;
             if (pointer_info.active) {
                 if (pointer_info.click_handler) |handler| {
-                    if (now.subtract(pointer_info.start_time).higher_than(.from_float(0.25))) {
+                    if (now.subtract(pointer_info.start_time).higher_than(.from_float(0.4))) {
                         handler.long();
                         pointer_info.click_handler = null;
                     }
@@ -161,7 +161,7 @@ pub const Crosap_main = struct {
         u.log_end(.{"Stepping"});
         
         if (main.cr.new_frame(dtime)) |draw_context| {
-            root_element.update(&main.cr, dtime, draw_context.area.size);
+            root_element.update(&main.cr, dtime, draw_context.size());
             const gen_element = root_element.get_element();
             gen_element.frame(draw_context);
             main.cr.end_frame();
@@ -241,7 +241,7 @@ pub const Crosap_main = struct {
                         const time_since_pmoment = u.time_seconds().subtract(pointer_info.previous2.time);
                         if (time_since_pmoment.higher_than(.zero)) {
                             const moved = main.cr.pixel_to_position_exact(pointer_info.position.subtract(pointer_info.previous2.pos));
-                            send_velocity = moved.scale_down(time_since_pmoment);
+                            send_velocity = moved.scale(.from_int(-1)).scale_down(time_since_pmoment);
                         }
                     }
                     for (pointer_info.scroll_chain.items()) |dyn_element| {

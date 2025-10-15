@@ -23,6 +23,11 @@ const targets = std.StaticStringMap(std.Target.Query).initComptime(.{
         .os_tag = .linux,
         .abi = .gnu,
     }},
+    .{"windows_amd64", std.Target.Query {
+        .cpu_arch = .x86_64,
+        .cpu_model = .baseline,
+        .os_tag = .windows,
+    }},
 });
 
 pub fn app(b: *std.Build, app_main: []const u8) void {
@@ -58,6 +63,8 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         show_available_targets();
         b.invalid_user_input = true;
     }
+    const target_os = build_target.result.os.tag;
+    const target_arch = build_target.result.cpu.arch;
     const default_name = target_name;
     const output_name = output_option orelse default_name;
     
@@ -72,7 +79,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         var buffer: [4096]u8 = undefined;
         var reader = file.reader(&buffer);
         const file_content = reader.interface.allocRemaining(b.allocator, .unlimited) catch @panic("no memory");
-        var splitted = std.mem.tokenizeScalar(u8, file_content, ';');
+        var splitted = std.mem.tokenizeAny(u8, file_content, "\n&");
         while (splitted.next()) |content| {
             const colon_index = std.mem.indexOfScalar(u8, content, ':') orelse {
                 std.debug.print("The option {s} in the file {s} does not have a colon.\n", .{content, options_file_path});
@@ -85,7 +92,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         }
     }
     if (options_direct) |direct_options| {
-        var splitted = std.mem.tokenizeScalar(u8, direct_options, ';');
+        var splitted = std.mem.tokenizeAny(u8, direct_options, "\n&");
         while (splitted.next()) |content| {
             const colon_index = std.mem.indexOfScalar(u8, content, ':') orelse {
                 std.debug.print("The direct option {s} does not have a colon.\n", .{content});
@@ -111,6 +118,15 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         return;
     };
     const backend_items = option_parse_list(b.allocator, backend_content) catch @panic("invalid backend option");
+    
+    var link_static_list: []const []const u8 = &.{};
+    if (options.get("link_static")) |static_txt| {
+        link_static_list = option_parse_list(b.allocator, static_txt) catch @panic("invalid list");
+    }
+    var link_static = std.StringHashMapUnmanaged(void).empty;
+    for (link_static_list) |lib_name| {
+        link_static.put(b.allocator, lib_name, {}) catch @panic("no memory");
+    }
     
     var backend_mod_list = std.ArrayList(u8).empty;
     for (backend_items, 0..) |backend_name, i| {
@@ -179,14 +195,19 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
                 var dep: *std.Build.Module = undefined;
                 if (std.mem.eql(u8, dep_lib, "@render")) {
                     const dep_path = std.fmt.allocPrint(b.allocator, "render/{s}", .{dep_mod}) catch @panic("no memory");
-                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util) orelse return;
+                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
                     dep.addImport("util", util);
                 } else if (std.mem.eql(u8, dep_lib, "@audio")) {
                     const dep_path = std.fmt.allocPrint(b.allocator, "audio/{s}", .{dep_mod}) catch @panic("no memory");
-                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util) orelse return;
+                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
                     dep.addImport("util", util);
                 } else {
-                    const lib = crosap_dep.builder.lazyDependency(dep_lib, .{}) orelse return;
+                    const lib = crosap_dep.builder.lazyDependency(dep_lib, .{
+                        .link_static = if (link_static.contains(dep_lib)) true else null,
+                        .os = target_os,
+                        .arch = target_arch,
+                        .release = release_option,
+                    }) orelse return;
                     dep = lib.module(dep_mod);
                     dep.addImport("util", util);
                 }
@@ -308,7 +329,7 @@ fn name_part_of_path(path: []const u8) []const u8 {
     return path[start..];
 }
 
-fn create_backend_lib_module(b: *std.Build, crosap_dep: *std.Build.Dependency, lib_path: []const u8, util: *std.Build.Module) ?*std.Build.Module {
+fn create_backend_lib_module(b: *std.Build, crosap_dep: *std.Build.Dependency, lib_path: []const u8, util: *std.Build.Module, link_static: *std.StringHashMapUnmanaged(void), target_os: std.Target.Os.Tag, target_arch: std.Target.Cpu.Arch, release: ?bool) ?*std.Build.Module {
     var dir = crosap_dep.builder.build_root.handle.openDir(lib_path, .{}) catch @panic("backend library not found");
     defer dir.close();
     
@@ -324,7 +345,12 @@ fn create_backend_lib_module(b: *std.Build, crosap_dep: *std.Build.Dependency, l
         while (lines_iterator.next()) |line| {
             const dep_info = parse_dependency_line(line) orelse continue;
             
-            const lib = crosap_dep.builder.lazyDependency(dep_info.library, .{}) orelse return null;
+            const lib = crosap_dep.builder.lazyDependency(dep_info.library, .{
+                .link_static = if (link_static.contains(dep_info.library)) true else null,
+                .os = target_os,
+                .arch = target_arch,
+                .release = release,
+            }) orelse return null;
             const dep = lib.module(dep_info.module);
             dep.addImport("util", util);
             mod.addImport(dep_info.name, dep);

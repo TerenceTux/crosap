@@ -44,6 +44,13 @@ pub fn add_modules_with_test(b: *std.Build, modules: anytype) void {
     }
 }
 
+pub fn resolve_target(b: *std.Build, os: ?std.Target.Os.Tag, arch: ?std.Target.Cpu.Arch) std.Build.ResolvedTarget {
+    return b.resolveTargetQuery(.{
+        .cpu_arch = arch,
+        .os_tag = os,
+    });
+}
+
 pub fn build(b: *std.Build) void {
     add_modules_with_test(b, .{
         .util = "src/util.zig",
