@@ -1,4 +1,5 @@
 const u = @import("util");
+const builtin = @import("builtin");
 const std = @import("std");
 const types = @import("types");
 const Device = @import("main.zig").Device;
@@ -16,7 +17,13 @@ pub const Task = struct {
     }
     
     pub fn start_recording(task: *Task, submit_once: bool) !void {
-        const flags: types.Command_buffer_usage_flags = if (submit_once) .just(.one_time_submit) else .empty();
+        const flags: types.Command_buffer_usage_flags = if (builtin.os.tag == .windows) (
+            // In wine, the call to vkBeginCommandBuffer crashes when the one_time_submit flag is set to true for some reason.
+            // It's only a problem in wine, in windows it works correctly
+            .empty()
+        ) else (
+            if (submit_once) .just(.one_time_submit) else .empty()
+        );
         const begin_info = types.Command_buffer_begin_info {
             .flags = flags,
             .inheritance_info = undefined,

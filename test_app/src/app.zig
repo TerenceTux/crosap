@@ -199,8 +199,6 @@ pub const Test_element = struct {
     }
     
     fn scroll_offset(el: *Test_element) u.Vec2i {
-        u.log(.{"Center: ",el.scroll_center});
-        u.log(.{"Offset: ",el.size.scale_down(.create(2)).subtract(el.scroll_center)});
         return el.size.scale_down(.create(2)).subtract(el.scroll_center);
     }
     

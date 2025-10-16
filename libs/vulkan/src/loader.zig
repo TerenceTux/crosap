@@ -1,12 +1,21 @@
 const u = @import("util");
+const builtin = @import("builtin");
 const std = @import("std");
 const types = @import("types");
 const Instance = @import("instance.zig").Instance;
 
-const lib_paths = [_][]const u8 {
-    "/usr/lib/libvulkan.so",
-    "/usr/lib/libvulkan.so.1",
-    "/lib/libvulkan.so",
+const lib_paths = switch(builtin.os.tag) {
+    .linux => [_][]const u8 {
+        "libvulkan.so.1"
+        //"/usr/lib/libvulkan.so",
+        //"/usr/lib/libvulkan.so.1",
+        //"/lib/libvulkan.so",
+    },
+    .windows => [_][]const u8 {
+        "vulkan-1.dll",
+        // "C:/Windows/System32/vulkan-1.dll"
+    },
+    else => [_][]const u8 {},
 };
 
 pub fn get_command(function: @Type(.enum_literal)) types.Command {
