@@ -102,7 +102,9 @@ pub fn build(b: *std.Build) void {
         mod.addIncludePath(b.path("glfw/include/GLFW"));
         mod.addIncludePath(b.path("generated_headers"));
         mod.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
-        mod.linkSystemLibrary("gdi32", .{});
+        if (target_os == .windows) {
+            mod.linkSystemLibrary("gdi32", .{});
+        }
         
         const build_flags = switch (target_os) {
             .windows => &build_flags_windows,
