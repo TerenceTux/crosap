@@ -1,14 +1,22 @@
 const u = @import("util");
 const std = @import("std");
+const builtin = @import("builtin");
 const types = @import("types.zig");
 const Window = @import("main.zig").Window;
 const vulkan = @import("vulkan");
 const static_linked = @import("options").static_linked;
 const glfw_c = @import("glfw_c");
 
-const lib_paths = [_][]const u8 {
-    "/usr/lib/libglfw.so",
-    "/usr/lib/libglfw.so.3",
+const lib_paths = switch(builtin.os.tag) {
+    .linux => [_][]const u8 {
+        "libglfw.so.3",
+        //"/usr/lib/libglfw.so",
+        //"/usr/lib/libglfw.so.3",
+    },
+    .windows => [_][]const u8 {
+        "glfw3.dll",
+    },
+    else => [_][]const u8 {},
 };
 
 const Vulkan_instance_extension = vulkan.types.Instance_extension; 
@@ -55,7 +63,7 @@ pub const Loader = struct {
         }
     };
     
-    dynlib: if (static_linked) std.DynLib else void,
+    dynlib: if (static_linked) void else std.DynLib,
     version: Version,
     fns: struct {
         glfwInit: *const fn (

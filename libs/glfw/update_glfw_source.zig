@@ -59,13 +59,18 @@ pub fn main() void {
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
+    
+    var threaded: std.Io.Threaded = .init(alloc);
+    defer threaded.deinit();
+    const io = threaded.io();
+    
     const args = std.process.argsAlloc(alloc) catch @panic("Error getting arguments");
     defer std.process.argsFree(alloc, args);
     if (args.len != 2) {
         @panic("Expected one argument");
     }
     
-    const current_time = std.time.timestamp();
+    const current_time = (std.Io.Clock.real.now(io) catch @panic("Error getting time")).toSeconds();
     var cwd = std.fs.cwd().openDir(".", .{}) catch @panic("Error opening cwd");
     defer cwd.close();
     if (cwd.openDir("glfw", .{})) |glfw_git_c| {
@@ -75,7 +80,7 @@ pub fn main() void {
         if (cwd.readFileAlloc("last_glfw_update", alloc, .limited(256))) |last_update_txt| {
             defer alloc.free(last_update_txt);
             const last_update = std.fmt.parseInt(i64, last_update_txt, 10) catch @panic("Number parse error");
-            if (last_update < current_time + day_in_seconds) {
+            if (current_time < last_update + day_in_seconds) {
                 needs_updating = false;
             }
         } else |_| {}

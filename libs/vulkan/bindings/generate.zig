@@ -13,6 +13,11 @@ pub fn main() !void {
     defer _ = gp_allocator.deinit();
     alloc = gp_allocator.allocator();
     
+    
+    var threaded: std.Io.Threaded = .init(alloc);
+    defer threaded.deinit();
+    const io = threaded.io();
+    
     const args = std.process.argsAlloc(alloc) catch @panic("no memory");
     defer std.process.argsFree(alloc, args);
     var xml_path: ?[]const u8 = null;
@@ -29,7 +34,7 @@ pub fn main() !void {
     defer file.close();
     
     var read_buffer: [4096]u8 = undefined;
-    var reader = file.reader(&read_buffer);
+    var reader = file.reader(io, &read_buffer);
     const read_interface = &reader.interface;
     
     var output = if (output_path) |open_path| (

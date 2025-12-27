@@ -5,6 +5,7 @@ const Event = crosap_api.Event;
 const Pointer = crosap_api.Pointer;
 const Key = crosap_api.Key;
 const render_vulkan = @import("render_vulkan");
+const Portaudio = @import("audio_portaudio").Audio;
 
 const Backend_event = union(enum) {
     key_update: struct {
@@ -34,6 +35,7 @@ pub fn Backend(render_type: Render_type) type {
     const Texture = switch (render_type) {
         .vulkan => render_vulkan.Texture,
     };
+    const Audio = Portaudio;
     return struct {
         const This = @This();
         render: Render_data,
@@ -54,6 +56,8 @@ pub fn Backend(render_type: Render_type) type {
         cursor_move_callback: Cursor_move_callback,
         cursor_enter_callback: Cursor_enter_callback,
         scroll_callback: Scroll_callback,
+        
+        audio: Audio,
         
         const Key_callback = struct {
             b: *This,
@@ -208,12 +212,12 @@ pub fn Backend(render_type: Render_type) type {
             b.scroll_callback = .{.b = b};
             
             try b.glfw.init();
-            if (!b.glfw.vulkan_supported()) {
-                @panic("Glfw reports vulkan not supported");
-            }
             
             switch (render_type) {
                 .vulkan => {
+                    if (!b.glfw.vulkan_supported()) {
+                        return error.vulkan_not_supported;
+                    }
                     const required_extensions = try b.glfw.required_vulkan_extensions();
                     defer u.alloc.free(required_extensions);
                     try b.render.init_without_surface(required_extensions);
@@ -248,9 +252,13 @@ pub fn Backend(render_type: Render_type) type {
                     try b.render.set_surface(vulkan_surface);
                 },
             }
+            
+            u.log("Audio");
+            try b.audio.init();
         }
         
         pub fn deinit(b: *This) void {
+            b.audio.deinit();
             b.render.deinit();
             b.window.deinit();
             b.glfw.deinit();

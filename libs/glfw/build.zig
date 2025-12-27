@@ -81,6 +81,7 @@ pub fn build(b: *std.Build) void {
     
     const options = b.addOptions();
     options.addOption(bool, "static_linked", link_static);
+    options.addOption([]const u8, "for_lib", "glfw"); // this is needed because otherwise another library can have the same content, which will give an zig error (file exists in modules 'options0' and 'options1')
     const options_mod = options.createModule();
     mod.addImport("options", options_mod);
     

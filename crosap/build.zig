@@ -31,6 +31,10 @@ const targets = std.StaticStringMap(std.Target.Query).initComptime(.{
 });
 
 pub fn app(b: *std.Build, app_main: []const u8) void {
+    var threaded: std.Io.Threaded = .init(b.allocator);
+    defer threaded.deinit();
+    const io = threaded.io();
+    
     const crosap_dep = b.dependencyFromBuildZig(@This(), .{
         .as_dependency = true,
     });
@@ -77,7 +81,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         };
         defer file.close();
         var buffer: [4096]u8 = undefined;
-        var reader = file.reader(&buffer);
+        var reader = file.reader(io, &buffer);
         const file_content = reader.interface.allocRemaining(b.allocator, .unlimited) catch @panic("no memory");
         var splitted = std.mem.tokenizeAny(u8, file_content, "\n&");
         while (splitted.next()) |content| {

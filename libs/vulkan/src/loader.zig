@@ -6,7 +6,7 @@ const Instance = @import("instance.zig").Instance;
 
 const lib_paths = switch(builtin.os.tag) {
     .linux => [_][]const u8 {
-        "libvulkan.so.1"
+        "libvulkan.so.1",
         //"/usr/lib/libvulkan.so",
         //"/usr/lib/libvulkan.so.1",
         //"/lib/libvulkan.so",
