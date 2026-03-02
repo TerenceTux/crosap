@@ -8,45 +8,37 @@ const is_space = std.ascii.isWhitespace;
 var alloc: std.mem.Allocator = undefined;
 
 
-pub fn main() !void {
-    var gp_allocator = std.heap.DebugAllocator(.{}).init;
-    defer _ = gp_allocator.deinit();
-    alloc = gp_allocator.allocator();
+pub fn main(init: std.process.Init) !void {
+    alloc = init.gpa;
+    const io = init.io;
+    var args = init.minimal.args.iterateAllocator(alloc) catch @panic("error getting arguments");
+    defer args.deinit();
     
-    
-    var threaded: std.Io.Threaded = .init(alloc);
-    defer threaded.deinit();
-    const io = threaded.io();
-    
-    const args = std.process.argsAlloc(alloc) catch @panic("no memory");
-    defer std.process.argsFree(alloc, args);
-    var xml_path: ?[]const u8 = null;
-    var output_path: ?[]const u8 = null;
-    if (args.len >= 2) {
-        xml_path = args[1];
-    }
-    if (args.len >= 3) {
-        output_path = args[2];
+    _ = args.skip();
+    const xml_path: ?[]const u8 = args.next();
+    const output_path: ?[]const u8 = args.next();
+    if (args.skip()) {
+        @panic("too many arguments");
     }
     
-    const working_dir = std.fs.cwd();
-    var file = working_dir.openFile(xml_path orelse "vk.xml", .{}) catch @panic("xml file not found");
-    defer file.close();
+    const working_dir = std.Io.Dir.cwd();
+    var file = working_dir.openFile(io, xml_path orelse "vk.xml", .{}) catch @panic("xml file not found");
+    defer file.close(io);
     
     var read_buffer: [4096]u8 = undefined;
     var reader = file.reader(io, &read_buffer);
     const read_interface = &reader.interface;
     
     var output = if (output_path) |open_path| (
-        working_dir.createFile(open_path, .{}) catch @panic("could not create output file")
+        working_dir.createFile(io, open_path, .{}) catch @panic("could not create output file")
     ) else (
-        std.fs.File.stdout()
+        std.Io.File.stdout()
     );
     defer if (output_path != null) {
-        output.close();
+        output.close(io);
     };
     var write_buffer: [4096]u8 = undefined;
-    var writer = output.writer(&write_buffer);
+    var writer = output.writer(io, &write_buffer);
     
     var parser: Parser = undefined;
     parser.outputter.stream = &writer.interface;
@@ -400,23 +392,13 @@ const file_start =
 \\
 \\fn Flags_option(Options: type) type {
 \\    const fields = @typeInfo(Options).@"enum".fields;
-\\    var type_fields: [fields.len]std.builtin.Type.EnumField = undefined;
-\\    for (fields, &type_fields, 0..) |field, *type_field, i| {
-\\        type_field.* = .{
-\\            .name = field.name,
-\\            .value = 1 << i,
-\\        };
+\\    const names: [fields.len][]const u8 = undefined;
+\\    const values: [fields.len]u32 = undefined;
+\\    for (fields, &names, &values, 0..) |field, *name, *value, i| {
+\\        name = field.name;
+\\        value = 1 << i;
 \\    }
-\\    
-\\    const typeinfo = std.builtin.Type {
-\\        .@"enum" = .{
-\\            .tag_type = u32,
-\\            .is_exhaustive = true,
-\\            .decls = &.{},
-\\            .fields = &type_fields,
-\\        }
-\\    };
-\\    return @Type(typeinfo);
+\\    return @Enum(u32, .exhaustive, &names, &values);
 \\}
 \\
 \\fn Flags(Option: type) type {
@@ -575,7 +557,7 @@ const file_start =
 \\
 \\pub const Extension = struct {
 \\    name: [:0]const u8,
-\\    commands: []const @Type(.enum_literal),
+\\    commands: []const @TypeOf(.enum_literal),
 \\};
 \\
 \\pub const null_handle: u64 = 0;

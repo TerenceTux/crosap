@@ -18,7 +18,7 @@ const lib_paths = switch(builtin.os.tag) {
     else => [_][]const u8 {},
 };
 
-pub fn get_command(function: @Type(.enum_literal)) types.Command {
+pub fn get_command(function: @TypeOf(.enum_literal)) types.Command {
     const function_name = @tagName(function);
     return @field(types, function_name);
 }
@@ -174,7 +174,7 @@ pub const Loader = struct {
         if (loader.dynlib) |*dynlib| dynlib.close();
     }
     
-    pub fn call(loader: *Loader, function: @Type(.enum_literal), args: get_command(function).Call_arguments()) get_command(function).Call_return_type() {
+    pub fn call(loader: *Loader, function: @TypeOf(.enum_literal), args: get_command(function).Call_arguments()) get_command(function).Call_return_type() {
         const command = get_command(function);
         const function_pointer = @field(loader.fns, @tagName(function));
         return command.call(function_pointer, args);

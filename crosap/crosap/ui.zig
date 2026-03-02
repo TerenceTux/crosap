@@ -2,6 +2,7 @@ const std = @import("std");
 const u = @import("util");
 const Draw_context = @import("draw.zig").Draw_context;
 const Crosap = @import("crosap.zig").Crosap;
+const Update_context = @import("crosap.zig").Update_context;
 
 pub const X_align = enum {
     left,
@@ -16,6 +17,7 @@ pub const Y_align = enum {
 };
 
 pub const element = u.interface(struct {
+    // DO NOT call this directly. Instead, call `cr.deinit_element(element)`, because we have to remove it from some input bookkeeping.
     deinit: fn(cr: *Crosap) void,
     // when this is called, the position is known, so you can get the scroll offset
     frame: fn(draw: Draw_context) void,
@@ -119,7 +121,7 @@ pub const Dynamic_element = struct {
 
 pub const flexible_element = u.interface(struct {
     get_element: fn() element.Dynamic_interface,
-    update: fn(cr: *Crosap, dtime: u.Real, size: u.Vec2i) void,
+    update: fn(ctx: Update_context, size: u.Vec2i) void,
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -130,8 +132,8 @@ pub const flexible_element = u.interface(struct {
                 return s.imp.call(.get_element, .{});
             }
             
-            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real, size: u.Vec2i) void {
-                s.imp.call(.update, .{cr, dtime, size});
+            pub fn update(s: Selfp, ctx: Update_context, size: u.Vec2i) void {
+                s.imp.call(.update, .{ctx, size});
             }
         };
     }
@@ -139,8 +141,7 @@ pub const flexible_element = u.interface(struct {
 
 pub const x_flex_element = u.interface(struct {
     get_element: fn() element.Dynamic_interface,
-    update: fn(cr: *Crosap, dtime: u.Real, width: u.Int) void,
-    get_height: fn(cr: *Crosap) u.Int,
+    update: fn(ctx: Update_context, width: u.Int) u.Int,
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -151,12 +152,8 @@ pub const x_flex_element = u.interface(struct {
                 return s.imp.call(.get_element, .{});
             }
             
-            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real, width: u.Int) void {
-                s.imp.call(.update, .{cr, dtime, width});
-            }
-            
-            pub fn get_height(s: Selfp, cr: *Crosap) u.Int {
-                return s.imp.call(.get_height, .{cr});
+            pub fn update(s: Selfp, ctx: Update_context, width: u.Int) u.Int {
+                return s.imp.call(.update, .{ctx, width});
             }
         };
     }
@@ -164,8 +161,7 @@ pub const x_flex_element = u.interface(struct {
 
 pub const y_flex_element = u.interface(struct {
     get_element: fn() element.Dynamic_interface,
-    update: fn(cr: *Crosap, dtime: u.Real, height: u.Int) void,
-    get_width: fn(cr: *Crosap) u.Int,
+    update: fn(ctx: Update_context, height: u.Int) u.Int,
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -176,12 +172,8 @@ pub const y_flex_element = u.interface(struct {
                 return s.imp.call(.get_element, .{});
             }
             
-            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real, height: u.Int) void {
-                s.imp.call(.update, .{cr, dtime, height});
-            }
-            
-            pub fn get_width(s: Selfp, cr: *Crosap) u.Int {
-                return s.imp.call(.get_width, .{cr});
+            pub fn update(s: Selfp, ctx: Update_context, height: u.Int) u.Int {
+                return s.imp.call(.update, .{ctx, height});
             }
         };
     }
@@ -189,8 +181,7 @@ pub const y_flex_element = u.interface(struct {
 
 pub const fixed_element = u.interface(struct {
     get_element: fn() element.Dynamic_interface,
-    update: fn(cr: *Crosap, dtime: u.Real) void,
-    get_size: fn(cr: *Crosap) u.Vec2i,
+    update: fn(ctx: Update_context) u.Vec2i,
     
     pub fn Interface(Imp: type) type {
         return struct {
@@ -201,12 +192,8 @@ pub const fixed_element = u.interface(struct {
                 return s.imp.call(.get_element, .{});
             }
             
-            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real) void {
-                s.imp.call(.update, .{cr, dtime});
-            }
-            
-            pub fn get_size(s: Selfp, cr: *Crosap) u.Vec2i {
-                return s.imp.call(.get_size, .{cr});
+            pub fn update(s: Selfp, ctx: Update_context) u.Vec2i {
+                return s.imp.call(.update, .{ctx});
             }
         };
     }
@@ -304,10 +291,9 @@ pub const Plain_color = struct {
         _ = el;
     }
     
-    pub fn update(el: *Plain_color, cr: *Crosap, dtime: u.Int, size: u.Vec2i) void {
+    pub fn update(el: *Plain_color, ctx: Update_context, size: u.Vec2i) void {
         _ = el;
-        _ = cr;
-        _ = dtime;
+        _ = ctx;
         _ = size;
     }
     
@@ -326,6 +312,7 @@ pub const Plain_color = struct {
 
 pub const Simple_text = @import("text.zig").Simple_text;
 pub const Overflow_text = @import("text.zig").Overflow_text;
+
 const scrolling = @import("scrolling.zig");
 pub const auto_velocity_update = scrolling.auto_velocity_update;
 pub const Scroll_state = scrolling.Scroll_state;
@@ -335,3 +322,7 @@ pub const Y_scroll_fixed = scrolling.Y_scroll_fixed;
 pub const X_scroll_fixed = scrolling.X_scroll_fixed;
 pub const Y_scroll = scrolling.Y_scroll;
 pub const X_scroll = scrolling.X_scroll;
+
+const container = @import("container.zig");
+pub const X_stack = container.X_stack;
+pub const Y_stack = container.Y_stack;

@@ -60,12 +60,7 @@ pub fn Exporter(Writer: type) type {
                     } else {
                         switch (int_info.signedness) {
                             .signed => {
-                                exporter.write_as(@Type(.{
-                                    .int = .{
-                                        .signedness = .unsigned,
-                                        .bits = int_info.bits,
-                                    }
-                                }), @bitCast(T));
+                                exporter.write_as(@Int(.unsigned, int_info.bits), @bitCast(T));
                             },
                             .unsigned => if (int_info.bits > 0) {
                                 var bit: u.Uint_that_fits(int_info.bits - 1) = int_info.bits - 1;
@@ -83,12 +78,7 @@ pub fn Exporter(Writer: type) type {
                     }
                 },
                 .float => |float_info| {
-                    exporter.write_as(@Type(.{
-                        .int = .{
-                            .signedness = .unsigned,
-                            .bits = float_info.bits,
-                        }
-                    }), @bitCast(T));
+                    exporter.write_as(@Int(.unsigned, float_info.bits), @bitCast(T));
                 },
                 .pointer => |pointer_info| {
                     switch (pointer_info.size) {
@@ -130,7 +120,7 @@ pub fn Exporter(Writer: type) type {
                         exporter.write_0();
                     }
                 },
-                .@"enum" => |_| {
+                .@"enum" => {
                     exporter.write(@intFromEnum(value));
                 },
                 .@"union" => |union_info| {
@@ -173,12 +163,7 @@ pub const bit_writer = u.writer(u1);
 
 // You have to call .deinit() at the end to send everything!
 pub fn Bit_writer_from_int(bits: u16, Writer: type) type {
-    const Int = @Type(.{
-        .int = .{
-            .signedness = .unsigned,
-            .bits = bits,
-        }
-    });
+    const Int = @Int(.unsigned, bits);
     u.writer(Int).validate(Writer);
     const Index = std.math.Log2Int(Int);
     const max_index: Index = @intCast(bits - 1);
@@ -257,12 +242,7 @@ pub fn Importer(Reader: type) type {
                     } else {
                         switch (int_info.signedness) {
                             .signed => {
-                                importer.write_as(@Type(.{
-                                    .int = .{
-                                        .signedness = .unsigned,
-                                        .bits = int_info.bits,
-                                    }
-                                }), @bitCast(T));
+                                importer.write_as(@Int(.unsigned, int_info.bits), @bitCast(T));
                             },
                             .unsigned => if (int_info.bits > 0) {
                                 var number: T = 0;
@@ -283,12 +263,7 @@ pub fn Importer(Reader: type) type {
                     }
                 },
                 .float => |float_info| {
-                    const Int = @Type(.{
-                        .int = .{
-                            .signedness = .unsigned,
-                            .bits = float_info.bits,
-                        }
-                    });
+                    const Int = @Int(.unsigned, float_info.bits);
                     const int_val: Int = undefined;
                     importer.read_to(Int, &int_val);
                     value.* = @bitCast(int_val);
@@ -332,7 +307,7 @@ pub fn Importer(Reader: type) type {
                         value.* = null;
                     }
                 },
-                .@"enum" => |_| {
+                .@"enum" => {
                     value.* = @intFromEnum(value);
                 },
                 .@"union" => |union_info| {
@@ -372,12 +347,7 @@ pub fn create_importer(reader: anytype) Importer(@TypeOf(reader)) {
 pub const bit_reader = u.reader(u1);
 
 pub fn Bit_reader_from_int(bits: u16, Reader: type) type {
-    const Int = @Type(.{
-        .int = .{
-            .signedness = .unsigned,
-            .bits = bits,
-        },
-    });
+    const Int = @Int(.unsigned, bits);
     u.reader(Int).validate(Reader);
     const Index = std.math.Log2Int(Int);
     const max_index: Index = @intCast(bits - 1);

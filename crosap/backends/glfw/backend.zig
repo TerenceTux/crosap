@@ -379,6 +379,10 @@ pub fn Backend(render_type: Render_type) type {
             }
             return b.events.pop_start();
         }
+        
+        pub fn play_audio(b: *This, audio: []const i16) !void {
+            try b.audio.send(audio);
+        }
     };
 }
 

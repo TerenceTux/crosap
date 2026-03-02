@@ -7,18 +7,16 @@ pub const Audio = struct {
     device: lib_portaudio.Device,
     stream: lib_portaudio.Stream,
     stream_callback: Stream_callback,
+    buffer: u.Audio_buffer,
     
     const Stream_callback = struct {
         a: *Audio,
         
         pub fn call(callback: *Stream_callback, input: [*]const u8, output: [*]u8, frame_count: usize, time_info: *const lib_portaudio.types.Stream_callback_time_info, status_flags: lib_portaudio.types.Stream_callback_flags) lib_portaudio.types.Stream_callback_result {
-            const output_i8: [*]i16 = @ptrCast(@alignCast(output));
-            const output_frames = output_i8[0..frame_count];
-            for (output_frames) |*sample| {
-                sample.* = u.random.int(i16);
-            }
+            const output_i16: [*]i16 = @ptrCast(@alignCast(output));
+            const output_frames = output_i16[0 .. frame_count * 2];
+            callback.a.buffer.get_audio(.stereo, i16, 48000, output_frames);
             _ = input;
-            _ = callback;
             _ = time_info;
             _ = status_flags;
             return .cont;
@@ -26,6 +24,7 @@ pub const Audio = struct {
     };
     
     pub fn init(a: *Audio) !void {
+        a.buffer.init();
         try a.portaudio.init();
         
         if (u.debug) {
@@ -100,10 +99,10 @@ pub const Audio = struct {
     pub fn deinit(a: *Audio) void {
         a.stream.close();
         a.portaudio.deinit();
+        a.buffer.deinit();
     }
     
-    pub fn send(a: *Audio, buffer: []const u8) !void {
-        _ = a;
-        _ = buffer;
+    pub fn send(a: *Audio, audio: []const i16) !void {
+        a.buffer.add_audio(audio);
     }
 };

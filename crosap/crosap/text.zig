@@ -1,6 +1,7 @@
 const u = @import("util");
 const General_map = @import("draw.zig").General_map;
 const Draw_context = @import("draw.zig").Draw_context;
+const Update_context = @import("crosap.zig").Update_context;
 const ui = @import("ui.zig");
 const Crosap = @import("crosap.zig").Crosap;
 
@@ -140,7 +141,6 @@ pub const Simple_text = struct {
     pub const get_element = ui.create_fixed_element(Simple_text);
     text: []const u8,
     x_align: ui.X_align,
-    size: u.Vec2i,
     
     pub fn init(el: *Simple_text, text: []const u8, x_align: ui.X_align) void {
         el.text = text;
@@ -151,9 +151,8 @@ pub const Simple_text = struct {
         _ = el;
     }
     
-    pub fn update(el: *Simple_text, cr: *Crosap, dtime: u.Real) void {
-        _ = cr;
-        _ = dtime;
+    pub fn update(el: *Simple_text, ctx: Update_context) u.Vec2i {
+        _ = ctx;
         var lines = u.Int.one;
         var widest = u.Int.zero;
         var current = u.Int.zero;
@@ -163,16 +162,16 @@ pub const Simple_text = struct {
                     widest = current;
                 }
                 current = .zero;
-                lines.mut_add(.one);
+                lines.increase(.one);
             } else {
                 const width = character_width(char);
-                current.mut_add(width);
+                current.increase(width);
             }
         }
         if (current.higher_than(widest)) {
             widest = current;
         }
-        el.size = .create(
+        return .create(
             widest,
             lines.multiply(.create(5)),
         );
@@ -194,7 +193,7 @@ pub const Simple_text = struct {
                 var current_index = start_of_line;
                 while (current_index < el.text.len and el.text[current_index] != '\n') {
                     const char_width = character_width(el.text[current_index]);
-                    line_width.mut_add(char_width);
+                    line_width.increase(char_width);
                     current_index += 1;
                 }
             }
@@ -207,14 +206,14 @@ pub const Simple_text = struct {
             while (current_index < el.text.len and el.text[current_index] != '\n') {
                 const char = el.text[current_index];
                 draw_character(draw, char, .create(current_x, current_y));
-                current_x.mut_add(character_width(char));
+                current_x.increase(character_width(char));
                 current_index += 1;
             }
             if (current_index < el.text.len and el.text[current_index] == '\n') {
                 current_index += 1;
             }
             start_of_line = current_index;
-            current_y.mut_add(.create(5));
+            current_y.increase(.create(5));
         }
     }
     
@@ -243,9 +242,8 @@ pub const Overflow_text = struct {
         el.lines.deinit();
     }
     
-    pub fn update(el: *Overflow_text, cr: *Crosap, dtime: u.Real, width: u.Int) void {
-        _ = cr;
-        _ = dtime;
+    pub fn update(el: *Overflow_text, ctx: Update_context, width: u.Int) u.Int {
+        _ = ctx;
         const text = el.text;
         el.lines.clear();
         // Each row of the text can be splitted into words by spaces and tabs
@@ -278,7 +276,7 @@ pub const Overflow_text = struct {
             } else if (current_index - waiting_index > 16) {
                 waiting_index = current_index - 16;
             }
-            current_width.mut_add(character_width(text[current_index]));
+            current_width.increase(character_width(text[current_index]));
             if (current_width.higher_than(width)) {
                 // create new line of line_start to waiting_index, but without trailing spaces
                 const end = if (waiting_index == 0 or text[waiting_index - 1] == ' ') waiting_index else current_index;
@@ -293,10 +291,6 @@ pub const Overflow_text = struct {
                 waiting_index = end;
             }
         }
-    }
-    
-    pub fn get_height(el: *Overflow_text, cr: *Crosap) u.Int {
-        _ = cr;
         return u.Int.create(el.lines.count).multiply(.create(5));
     }
     
@@ -307,7 +301,7 @@ pub const Overflow_text = struct {
             if (el.x_align != .left) {
                 line_width = .zero;
                 for (line) |char| {
-                    line_width.mut_add(character_width(char));
+                    line_width.increase(character_width(char));
                 }
             }
             var current_x = switch (el.x_align) {
@@ -317,9 +311,9 @@ pub const Overflow_text = struct {
             };
             for (line) |char| {
                 draw_character(draw, char, .create(current_x, current_y));
-                current_x.mut_add(character_width(char));
+                current_x.increase(character_width(char));
             }
-            current_y.mut_add(.create(5));
+            current_y.increase(.create(5));
         }
     }
     

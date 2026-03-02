@@ -4,7 +4,6 @@ const u = @import("util.zig");
 pub const Debug_Logger = struct {
     level: u16,
     frame_enabled: bool,
-    writer: std.fs.File.Writer,
     this_line: u.List(u8),
     line_writer: u.List(u8).Writer,
     stream: u.byte_writer.Static_interface(u.List(u8).Writer),
@@ -14,7 +13,6 @@ pub const Debug_Logger = struct {
     pub fn init(l: *Logger) void {
         l.level = 0;
         l.frame_enabled = false;
-        l.writer = std.fs.File.stderr().writer(&.{});
         l.last_log = 0;
     }
     
@@ -54,10 +52,12 @@ pub const Debug_Logger = struct {
     
     fn end_line(l: *Logger) void {
         l.stream_write("\n");
-        std.debug.lockStdErr();
-        l.writer.interface.writeAll(l.this_line.items()) catch @panic("print error");
-        l.writer.interface.flush() catch @panic("print error");
-        std.debug.unlockStdErr();
+        const stderr = u.io.lockStderr(&.{}, .escape_codes) catch @panic("can't lock stderr");
+        defer u.io.unlockStderr();
+        const writer = &stderr.file_writer.interface;
+        
+        writer.writeAll(l.this_line.items()) catch @panic("print error");
+        writer.flush() catch @panic("print error");
         l.this_line.deinit();
     }
     

@@ -295,9 +295,9 @@ pub const drawable = u.interface(struct {
                         total_green = total_green.add(this_color.green);
                         total_blue = total_blue.add(this_color.blue);
                         total_alpha = total_alpha.add(this_color.alpha);
-                        antialias_x.increase();
+                        antialias_x.increase(.one);
                     }
-                    antialias_y.increase();
+                    antialias_y.increase(.one);
                 }
                 
                 const result = u.Color {
@@ -325,9 +325,9 @@ pub const drawable = u.interface(struct {
                         const screen_color = color.to_screen_color();
                         const index = pixel_y.multiply(pixel_width).add(pixel_x);
                         buffer[index.to(usize)] = screen_color;
-                        pixel_x.increase();
+                        pixel_x.increase(.one);
                     }
-                    pixel_y.increase();
+                    pixel_y.increase(.one);
                 }
                 s.imp.call(.end, .{});
             }

@@ -30,6 +30,9 @@ pub const Rect2r = @import("vec.zig").Rect2r;
 pub const Int = @import("number.zig").Int;
 pub const Real = @import("number.zig").Real;
 
+pub const pi = Real.from_float(3.14159265358979323846264338327950288419716939937510);
+pub const e = Real.from_float(2.71828182845904523536028747135266249775724709369995);
+
 pub const Color = @import("color.zig").Color;
 pub const Screen_color = @import("color.zig").Screen_color;
 
@@ -40,6 +43,8 @@ pub const byte_writer = @import("reader_writer.zig").byte_writer;
 pub const Buffered_byte_reader = @import("reader_writer.zig").Buffered_byte_reader;
 pub const Buffered_byte_writer = @import("reader_writer.zig").Buffered_byte_writer;
 pub const Slice_reader = @import("reader_writer.zig").Slice_reader;
+
+pub const Audio_buffer = @import("audio.zig").Audio_buffer;
 
 pub const drawable = @import("drawing.zig").drawable;
 pub const Draw_point = @import("drawing.zig").Point;
@@ -54,6 +59,9 @@ pub const event = @import("event.zig");
 
 pub var alloc: std.mem.Allocator = undefined;
 const alloc_interface = &@import("allocator.zig").alloc_interface;
+
+pub var threaded_io: std.Io.Threaded = undefined;
+pub var io: std.Io = undefined;
 
 pub fn alloc_single(T: type) *T {
     if (@inComptime()) {
@@ -143,30 +151,35 @@ pub fn bytes_equal(a: []const u8, b: []const u8) bool {
     return true;
 }
 
-
+/// Not for security
 pub var random: std.Random = undefined;
 var rng: std.Random.DefaultPrng = undefined;
 
 pub const debug = builtin.mode == .Debug;
 
-var start_time: std.time.Instant = undefined;
+var start_time: std.Io.Timestamp = undefined;
 
 pub fn init() void {
     alloc = alloc_interface.init();
-    start_time = std.time.Instant.now() catch @panic("no timer available");
+    threaded_io = .init(alloc, .{});
+    io = threaded_io.io();
+    start_time = std.Io.Clock.awake.now(io);
     logger.init();
-    rng = .init(std.crypto.random.int(u64));
+    var random_seed: [8]u8 = undefined;
+    io.random(&random_seed);
+    rng = .init(@bitCast(random_seed));
     random = rng.random();
 }
 
 pub fn deinit() void {
     logger.deinit();
+    threaded_io.deinit();
     alloc_interface.deinit();
 }
 
 pub fn time_nanoseconds() u64 {
-    const now = std.time.Instant.now() catch @panic("no timer available");
-    return now.since(start_time);
+    const now = std.Io.Clock.awake.now(io);
+    return @intCast(start_time.durationTo(now).toNanoseconds());
 }
 
 pub fn time_seconds() Real {
@@ -215,29 +228,30 @@ pub fn has_method(Type: type, comptime name: []const u8) bool {
 
 // Returns the unsigned integer type that can at least contain the number 0 to max (inclusive)
 pub fn Uint_that_fits(comptime max: usize) type {
+    if (max == 0) return u0;
     const bits = std.math.log_int(usize, 2, max);
     // if max = 7, bits is 2, so we need 3 bits
     // if max = 8, bits is 3, so we need 4 bits to hold the number 8
-    return @Type(.{
-        .int = .{
-            .signedness = .unsigned,
-            .bits = bits + 1,
-        },
-    });
+    return @Int(.unsigned, bits + 1);
 }
 
 
 // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-pub fn next_power_of_two(inp: u32) u32 {
+pub fn next_power_of_two(inp: anytype) @TypeOf(inp) {
+    const int_info = @typeInfo(@TypeOf(inp)).int;
+    assert(int_info.signedness == .unsigned);
+    const bits = int_info.bits;
+    const shifts_needed = comptime std.math.log2_int_ceil(@TypeOf(inp), bits);
+    
     if (inp == 0) {
         return 1;
     }
     var v = inp - 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
+    comptime var shift_value = 1;
+    inline for (0..shifts_needed) |_| {
+        v |= v >> shift_value;
+        shift_value *= 2;
+    }
     return v + 1;
 }
 
@@ -372,7 +386,7 @@ pub fn comptime_to_string(comptime value: anytype) [:0]const u8 {
                 else => @compileError("wrong argument: pointer must be "),
             }
         },
-        .@"enum" => |_| {
+        .@"enum" => {
             return @tagName(value);
         },
         .enum_literal => {
@@ -416,13 +430,7 @@ pub fn comptime_to_sentinel(T: type, sentinel: T, in: []const T) [:sentinel]cons
 }
 
 pub fn Single_error_set(comptime error_name: []const u8) type {
-    return @Type(.{
-        .error_set = &.{
-            .{
-                .name = comptime_to_sentinel(u8, 0, error_name),
-            },
-        },
-    });
+    return @TypeOf(@field(anyerror, error_name));
 }
 
 pub fn create_error(comptime name: []const u8) Single_error_set(name) {

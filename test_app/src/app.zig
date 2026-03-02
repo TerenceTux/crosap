@@ -4,6 +4,7 @@ const crosap = @import("crosap");
 const Crosap = crosap.Crosap;
 const ui = crosap.ui;
 const Draw_context = @import("crosap").Draw_context;
+const Update_context = @import("crosap").Update_context;
 
 const Object = struct {
     pos: u.Vec2i,
@@ -15,8 +16,14 @@ pub const activities = struct {
     pub const main = Main_activity;
 };
 
+const audio_data = @embedFile("audio.raw");
+const audio_buffer: []const i16 = @ptrCast(@alignCast(audio_data));
+
 const Main_activity = struct {
     root_el: Test_element,
+    audio_fase: u.Real,
+    audio_beep: bool,
+    audio_player: crosap.Audio_player,
     
     pub fn root_element(act: *Main_activity) ui.flexible_element.Dynamic_interface {
         return ui.flexible_element.dynamic(&act.root_el);
@@ -25,6 +32,11 @@ const Main_activity = struct {
     pub fn init_from_data(act: *Main_activity, data: u.serialize.bit_reader.Dynamic_interface) void {
         _ = data;
         act.root_el.init(.from_byte_rgb(0, 0, 0));
+        act.audio_fase = .zero;
+        act.audio_beep = false;
+        
+        act.audio_player.init(audio_buffer);
+        act.audio_player.repeat = true;
     }
     
     pub fn deinit(act: *Main_activity, cr: *Crosap) void {
@@ -40,120 +52,36 @@ const Main_activity = struct {
     }
     
     pub fn update(act: *Main_activity, cr: *Crosap, dtime: u.Real) crosap.Keyboard_info {
-        _ = act;
-        _ = cr;
         _ = dtime;
+//         var audio_output = cr.audio_output();
+//         u.log(.{"Adding ",audio_output.needed_samples()," samples"});
+//         while (audio_output.needed_samples() > 0) {
+//             const tone = if (act.audio_beep) u.Real.from_int(900) else u.Real.from_int(1000);
+//             const sin_wave = act.audio_fase.multiply(u.pi).multiply(.from_int(2)).multiply(tone).sin().divide(.from_int(4));
+//             const sin_scaled = sin_wave.multiply(.from_int(32767));
+//             
+//             const side = act.audio_fase.multiply(u.pi).multiply(.from_int(2)).sin().add(.one).divide(.from_int(2));
+//             const left = sin_scaled.multiply(u.Real.one.subtract(side)).int_round().to(i16);
+//             const right = sin_scaled.multiply(side).int_round().to(i16);
+//             _ = left;
+//             _ = right;
+//             audio_output.add_stereo_sample(30000, -30000);
+//             
+//             act.audio_fase.increase(u.Real.from_int(100000).inverse());
+//             act.audio_fase = act.audio_fase.mod(.one);
+//         }
+        act.audio_player.update(cr);
         return .keyboard_needed;
-    }
-    
-    pub fn draw_frame(act: *Main_activity, draw: Draw_context) void {
-        _ = act;
-        //draw.image(.zero, draw.cr.general.get(.test_img));
-        //draw.image_align(.create(draw.size().x, .create(0)), draw.cr.general.get(.test_img), .right, .top);
-        draw.image(.create(.create(4*0), .create(4*0)), draw.cr.general.get(.nfont_capital_a));
-        draw.image(.create(.create(4*1), .create(4*0)), draw.cr.general.get(.nfont_capital_b));
-        draw.image(.create(.create(4*2), .create(4*0)), draw.cr.general.get(.nfont_capital_c));
-        draw.image(.create(.create(4*3), .create(4*0)), draw.cr.general.get(.nfont_capital_d));
-        draw.image(.create(.create(4*4), .create(4*0)), draw.cr.general.get(.nfont_capital_e));
-        draw.image(.create(.create(4*5), .create(4*0)), draw.cr.general.get(.nfont_capital_f));
-        draw.image(.create(.create(4*6), .create(4*0)), draw.cr.general.get(.nfont_capital_g));
-        draw.image(.create(.create(4*7), .create(4*0)), draw.cr.general.get(.nfont_capital_h));
-        draw.image(.create(.create(4*8), .create(4*0)), draw.cr.general.get(.nfont_capital_i));
-        draw.image(.create(.create(4*9), .create(4*0)), draw.cr.general.get(.nfont_capital_j));
-        draw.image(.create(.create(4*10), .create(4*0)), draw.cr.general.get(.nfont_capital_k));
-        draw.image(.create(.create(4*11), .create(4*0)), draw.cr.general.get(.nfont_capital_l));
-        draw.image(.create(.create(4*12), .create(4*0)), draw.cr.general.get(.nfont_capital_m));
-        draw.image(.create(.create(4*13), .create(4*0)), draw.cr.general.get(.nfont_capital_n));
-        draw.image(.create(.create(4*14), .create(4*0)), draw.cr.general.get(.nfont_capital_o));
-        draw.image(.create(.create(4*15), .create(4*0)), draw.cr.general.get(.nfont_capital_p));
-        draw.image(.create(.create(4*16), .create(4*0)), draw.cr.general.get(.nfont_capital_q));
-        draw.image(.create(.create(4*17), .create(4*0)), draw.cr.general.get(.nfont_capital_r));
-        draw.image(.create(.create(4*18), .create(4*0)), draw.cr.general.get(.nfont_capital_s));
-        draw.image(.create(.create(4*19), .create(4*0)), draw.cr.general.get(.nfont_capital_t));
-        draw.image(.create(.create(4*20), .create(4*0)), draw.cr.general.get(.nfont_capital_u));
-        draw.image(.create(.create(4*21), .create(4*0)), draw.cr.general.get(.nfont_capital_v));
-        draw.image(.create(.create(4*22), .create(4*0)), draw.cr.general.get(.nfont_capital_w));
-        draw.image(.create(.create(4*23), .create(4*0)), draw.cr.general.get(.nfont_capital_x));
-        draw.image(.create(.create(4*24), .create(4*0)), draw.cr.general.get(.nfont_capital_y));
-        draw.image(.create(.create(4*25), .create(4*0)), draw.cr.general.get(.nfont_capital_z));
-        draw.image(.create(.create(4*0), .create(4*1)), draw.cr.general.get(.nfont_small_a));
-        draw.image(.create(.create(4*1), .create(4*1)), draw.cr.general.get(.nfont_small_b));
-        draw.image(.create(.create(4*2), .create(4*1)), draw.cr.general.get(.nfont_small_c));
-        draw.image(.create(.create(4*3), .create(4*1)), draw.cr.general.get(.nfont_small_d));
-        draw.image(.create(.create(4*4), .create(4*1)), draw.cr.general.get(.nfont_small_e));
-        draw.image(.create(.create(4*5), .create(4*1)), draw.cr.general.get(.nfont_small_f));
-        draw.image(.create(.create(4*6), .create(4*1)), draw.cr.general.get(.nfont_small_g));
-        draw.image(.create(.create(4*7), .create(4*1)), draw.cr.general.get(.nfont_small_h));
-        draw.image(.create(.create(4*8), .create(4*1)), draw.cr.general.get(.nfont_small_i));
-        draw.image(.create(.create(4*9), .create(4*1)), draw.cr.general.get(.nfont_small_j));
-        draw.image(.create(.create(4*10), .create(4*1)), draw.cr.general.get(.nfont_small_k));
-        draw.image(.create(.create(4*11), .create(4*1)), draw.cr.general.get(.nfont_small_l));
-        draw.image(.create(.create(4*12), .create(4*1)), draw.cr.general.get(.nfont_small_m));
-        draw.image(.create(.create(4*13), .create(4*1)), draw.cr.general.get(.nfont_small_n));
-        draw.image(.create(.create(4*14), .create(4*1)), draw.cr.general.get(.nfont_small_o));
-        draw.image(.create(.create(4*15), .create(4*1)), draw.cr.general.get(.nfont_small_p));
-        draw.image(.create(.create(4*16), .create(4*1)), draw.cr.general.get(.nfont_small_q));
-        draw.image(.create(.create(4*17), .create(4*1)), draw.cr.general.get(.nfont_small_r));
-        draw.image(.create(.create(4*18), .create(4*1)), draw.cr.general.get(.nfont_small_s));
-        draw.image(.create(.create(4*19), .create(4*1)), draw.cr.general.get(.nfont_small_t));
-        draw.image(.create(.create(4*20), .create(4*1)), draw.cr.general.get(.nfont_small_u));
-        draw.image(.create(.create(4*21), .create(4*1)), draw.cr.general.get(.nfont_small_v));
-        draw.image(.create(.create(4*22), .create(4*1)), draw.cr.general.get(.nfont_small_w));
-        draw.image(.create(.create(4*23), .create(4*1)), draw.cr.general.get(.nfont_small_x));
-        draw.image(.create(.create(4*24), .create(4*1)), draw.cr.general.get(.nfont_small_y));
-        draw.image(.create(.create(4*25), .create(4*1)), draw.cr.general.get(.nfont_small_z));
-        draw.image(.create(.create(4*0), .create(4*2)), draw.cr.general.get(.nfont_number_0));
-        draw.image(.create(.create(4*1), .create(4*2)), draw.cr.general.get(.nfont_number_1));
-        draw.image(.create(.create(4*2), .create(4*2)), draw.cr.general.get(.nfont_number_2));
-        draw.image(.create(.create(4*3), .create(4*2)), draw.cr.general.get(.nfont_number_3));
-        draw.image(.create(.create(4*4), .create(4*2)), draw.cr.general.get(.nfont_number_4));
-        draw.image(.create(.create(4*5), .create(4*2)), draw.cr.general.get(.nfont_number_5));
-        draw.image(.create(.create(4*6), .create(4*2)), draw.cr.general.get(.nfont_number_6));
-        draw.image(.create(.create(4*7), .create(4*2)), draw.cr.general.get(.nfont_number_7));
-        draw.image(.create(.create(4*8), .create(4*2)), draw.cr.general.get(.nfont_number_8));
-        draw.image(.create(.create(4*9), .create(4*2)), draw.cr.general.get(.nfont_number_9));
-        draw.image(.create(.create(4*0), .create(4*3)), draw.cr.general.get(.nfont_underscore));
-        draw.image(.create(.create(4*1), .create(4*3)), draw.cr.general.get(.nfont_colon));
-        draw.image(.create(.create(4*2), .create(4*3)), draw.cr.general.get(.nfont_space));
-        draw.image(.create(.create(4*3), .create(4*3)), draw.cr.general.get(.nfont_dot));
-        draw.image(.create(.create(4*4), .create(4*3)), draw.cr.general.get(.nfont_comma));
-        draw.image(.create(.create(4*5), .create(4*3)), draw.cr.general.get(.nfont_semicolon));
-        draw.image(.create(.create(4*6), .create(4*3)), draw.cr.general.get(.nfont_brace_open));
-        draw.image(.create(.create(4*7), .create(4*3)), draw.cr.general.get(.nfont_brace_close));
-        draw.image(.create(.create(4*8), .create(4*3)), draw.cr.general.get(.nfont_bracket_open));
-        draw.image(.create(.create(4*9), .create(4*3)), draw.cr.general.get(.nfont_bracket_close));
-        draw.image(.create(.create(4*10), .create(4*3)), draw.cr.general.get(.nfont_curly_brace_open));
-        draw.image(.create(.create(4*11), .create(4*3)), draw.cr.general.get(.nfont_curly_brace_close));
-        draw.image(.create(.create(4*12), .create(4*3)), draw.cr.general.get(.nfont_angle_bracket_open));
-        draw.image(.create(.create(4*13), .create(4*3)), draw.cr.general.get(.nfont_angle_bracket_close));
-        draw.image(.create(.create(4*14), .create(4*3)), draw.cr.general.get(.nfont_slash));
-        draw.image(.create(.create(4*15), .create(4*3)), draw.cr.general.get(.nfont_backslash));
-        draw.image(.create(.create(4*16), .create(4*3)), draw.cr.general.get(.nfont_vertical_bar));
-        draw.image(.create(.create(4*17), .create(4*3)), draw.cr.general.get(.nfont_apostrophe));
-        draw.image(.create(.create(4*18), .create(4*3)), draw.cr.general.get(.nfont_quotation_mark));
-        draw.image(.create(.create(4*19), .create(4*3)), draw.cr.general.get(.nfont_dash));
-        draw.image(.create(.create(4*20), .create(4*3)), draw.cr.general.get(.nfont_plus));
-        draw.image(.create(.create(4*21), .create(4*3)), draw.cr.general.get(.nfont_question_mark));
-        draw.image(.create(.create(4*22), .create(4*3)), draw.cr.general.get(.nfont_exclamation_mark));
-        draw.image(.create(.create(4*23), .create(4*3)), draw.cr.general.get(.nfont_asterisk));
-        draw.image(.create(.create(4*24), .create(4*3)), draw.cr.general.get(.nfont_caret));
-        draw.image(.create(.create(4*25), .create(4*3)), draw.cr.general.get(.nfont_hash));
-        draw.image(.create(.create(4*26), .create(4*3)), draw.cr.general.get(.nfont_dollar_sign));
-        draw.image(.create(.create(4*27), .create(4*3)), draw.cr.general.get(.nfont_percent));
-        draw.image(.create(.create(4*28), .create(4*3)), draw.cr.general.get(.nfont_ampersand));
-        draw.image(.create(.create(4*29), .create(4*3)), draw.cr.general.get(.nfont_at));
-        draw.image(.create(.create(4*30), .create(4*3)), draw.cr.general.get(.nfont_backtick));
-        draw.image(.create(.create(4*31), .create(4*3)), draw.cr.general.get(.nfont_tilde));
-        
-        draw.image(.create(.create(0), .create(64)), draw.cr.general.texture.get(.create(.zero, draw.cr.general.texture.size)));
     }
     
     pub fn key_input(act: *Main_activity, cr: *Crosap, key: crosap.Key, event: crosap.Key_event) void {
         if (key == .space) {
             if (event == .press) {
                 act.root_el.color = u.Color.from_byte_rgb(0, 64, 0).to_screen_color();
+                act.audio_player.start();
             } else if (event == .release) {
                 act.root_el.color = u.Color.from_byte_rgb(0, 0, 0).to_screen_color();
+                act.audio_player.stop();
             }
         }
         _ = cr;
@@ -165,7 +93,12 @@ pub const Test_element = struct {
     color: u.Screen_color,
     text1_scroll: ui.Y_scroll,
     text1: ui.Overflow_text,
+    block2_scroll: ui.Y_scroll,
+    block2: ui.Y_stack,
+    text2_scroll: ui.X_scroll_fixed,
     text2: ui.Simple_text,
+    text3_scroll: ui.X_scroll_fixed,
+    text3: ui.Simple_text,
     scroll_center: u.Vec2i,
     auto_buildup: u.Vec2r,
     auto_velocity: u.Vec2r,
@@ -176,17 +109,26 @@ pub const Test_element = struct {
     pub fn init(el: *Test_element, color: u.Color) void {
         el.color = color.to_screen_color();
         el.text1.init(
-            \\Dit is een erg lange regel die opgesplitst moet worden in meerdere regels omdat het niet in dit kleine vakje past.
-            \\Woorden worden bij voorkeur niet afgebroken omdat je dan niet zou weten of het twee verschillende woorden zijn.
-            \\Toch zullen hele lange woorden zoals aansprakelijkheidswaardevaststellingsveranderingen en meervoudigepersoonlijkheidsstoornis wel tussendoor worden afgebroken.
-            \\
-            \\BEGINLETTER PANGRAM:
-            \\Alle beroemde circusartiesten deden even fantastische, gekke, heldhaftige, ingewikkelde judoachtige kunstjes, lenig maar niet onvoorzichtig; prachtig qua ritme speelden trompettisten, uniform vibreerden warme xylofoonklanken; ijskoninginnen zongen.
-            \\
-            \\Lorem ipsum dolor sit amet. Eos perspiciatis quia ab aliquam quod ut provident inventore sit quis culpa. Non necessitatibus quam aut quia natus vel internos nemo id dolore itaque eos deleniti incidunt qui dolor rerum. Et placeat impedit aut eius consequuntur eum voluptatum omnis non recusandae eaque id voluptatibus rerum ut illo quia sit alias labore? Rem sunt provident et omnis commodi eos libero galisum ut eveniet esse.
+            \\Hold the space key for some music: Crystal Cave by Alex "cynicmusic" Smith edited by congusbongus - <http://opengameart.org/content/crystal-cave-mysterious-ambience-seamless-loop> - CC-BY 3.0/CC-BY-SA 3.0/GPL 3.0 - used in Supertux
+            //\\Dit is een erg lange regel die opgesplitst moet worden in meerdere regels omdat het niet in dit kleine vakje past.
+            //\\Woorden worden bij voorkeur niet afgebroken omdat je dan niet zou weten of het twee verschillende woorden zijn.
+            //\\Toch zullen hele lange woorden zoals aansprakelijkheidswaardevaststellingsveranderingen en meervoudigepersoonlijkheidsstoornis wel tussendoor worden afgebroken.
+            //\\
+            //\\BEGINLETTER PANGRAM:
+            //\\Alle beroemde circusartiesten deden even fantastische, gekke, heldhaftige, ingewikkelde judoachtige kunstjes, lenig maar niet onvoorzichtig; prachtig qua ritme speelden trompettisten, uniform vibreerden warme xylofoonklanken; ijskoninginnen zongen.
+            //\\
+            //\\Lorem ipsum dolor sit amet. Eos perspiciatis quia ab aliquam quod ut provident inventore sit quis culpa. Non necessitatibus quam aut quia natus vel internos nemo id dolore itaque eos deleniti incidunt qui dolor rerum. Et placeat impedit aut eius consequuntur eum voluptatum omnis non recusandae eaque id voluptatibus rerum ut illo quia sit alias labore? Rem sunt provident et omnis commodi eos libero galisum ut eveniet esse.
         , .left);
         el.text1_scroll.init(ui.x_flex_element.dynamic(&el.text1));
-        el.text2.init("Dit is een tekst met een geweldig lettertype\nen een nieuwe regel.", .center);
+        el.text2.init("This is some text with an amazing font\nand a new line.\n\n\n\n\n\n\n\nbla\n\n\nblabla\n\n\nblablabla", .right);
+        el.text2_scroll.init(ui.fixed_element.dynamic(&el.text2));
+        el.text3.init("This line is pretty long, which makes you scroll quite a bit before you reach the end. These two texts are in a seperate scroll container which are stacked together.\n\nThis line is also part of it.\n\n\n\n\n\nNow\n\nyou\n\nalso\n\nhave to...\n\n\n\n\nScroll down", .left);
+        el.text3_scroll.init(ui.fixed_element.dynamic(&el.text3));
+        el.block2.init(&.{
+            ui.x_flex_element.dynamic(&el.text2_scroll),
+            ui.x_flex_element.dynamic(&el.text3_scroll),
+        });
+        el.block2_scroll.init(ui.x_flex_element.dynamic(&el.block2));
         el.scroll_center = .zero;
         el.auto_buildup = .zero;
         el.auto_velocity = .zero;
@@ -196,45 +138,57 @@ pub const Test_element = struct {
     pub fn deinit(el: *Test_element) void {
         el.text1.deinit();
         el.text2.deinit();
+        el.text3.deinit();
+        el.text2_scroll.deinit();
+        el.text3_scroll.deinit();
+        el.block2.deinit();
+        el.block2_scroll.deinit();
     }
     
     fn scroll_offset(el: *Test_element) u.Vec2i {
         return el.size.scale_down(.create(2)).subtract(el.scroll_center);
     }
     
-    pub fn update(el: *Test_element, cr: *Crosap, dtime: u.Real, size: u.Vec2i) void {
+    pub fn update(el: *Test_element, ctx: Update_context, size: u.Vec2i) void {
         el.size = size;
-        el.text1_scroll.update(cr, dtime, .create(
-            grid_size.subtract(.one),
-            grid_size.subtract(.one),
-        ));
-        el.text2.update(cr, dtime);
+        ctx.child_flexible(
+            ui.flexible_element.dynamic(&el.text1_scroll),
+            .create(grid_size.subtract(.one), grid_size.subtract(.one)),
+        );
         
-        if (cr.get_scroll(ui.element.dynamic(el))) |scroll| {
-            el.scroll_center.mut_add_bounded(scroll);
+        ctx.child_flexible(
+            ui.flexible_element.dynamic(&el.block2_scroll),
+            .create(grid_size.subtract(.one), grid_size.subtract(.one)),
+        );
+        
+        if (ctx.get_scroll()) |scroll| {
+            el.scroll_center.increase_bounded(scroll);
         } else {
             const start_velocity = el.auto_velocity;
             const velocity_length = start_velocity.length();
             if (velocity_length.higher_than(.zero)){
                 const velocity_dir = start_velocity.scale_down(velocity_length);
                 const stop_time = velocity_length.divide(auto_slow_down);
-                var used_time = dtime;
-                if (dtime.higher_or_equal(stop_time)) {
+                var used_time = ctx.dtime;
+                if (ctx.dtime.higher_or_equal(stop_time)) {
                     // we stop this frame
                     used_time = stop_time;
                     el.auto_velocity = .zero;
                 } else {
-                    const new_velocity = velocity_length.subtract(dtime.multiply(auto_slow_down));
+                    const new_velocity = velocity_length.subtract(ctx.dtime.multiply(auto_slow_down));
                     el.auto_velocity = velocity_dir.scale(new_velocity);
                 }
                 const avg_changing_velocity = start_velocity.add(el.auto_velocity).scale(.from_float(0.5));
-                const moved = avg_changing_velocity.scale(used_time).add(el.auto_velocity.scale(dtime.subtract(used_time)));
-                el.auto_buildup.mut_add(moved);
+                const moved = avg_changing_velocity.scale(used_time).add(el.auto_velocity.scale(ctx.dtime.subtract(used_time)));
+                el.auto_buildup.increase(moved);
                 const moved_dots = el.auto_buildup.round_to_vec2i();
-                el.auto_buildup.mut_subtract(moved_dots.to_vec2r());
-                el.scroll_center.mut_add_bounded(moved_dots);
+                el.auto_buildup.decrease(moved_dots.to_vec2r());
+                el.scroll_center.increase_bounded(moved_dots);
             }
         }
+        
+        ctx.set_child_pos(el.text1_scroll.get_element(), el.scroll_offset().add(.create(.one, .one)));
+        ctx.set_child_pos(el.block2_scroll.get_element(), el.scroll_offset().add(.create(grid_size.add(.one), .one)),);
     }
     
     const grid_size = u.Int.create(64);
@@ -259,37 +213,9 @@ pub const Test_element = struct {
                 .create(.one, draw.size().y),
             ), grid_color);
         }
-        
-        const text1_el = el.text1_scroll.get_element();
-        const text1_rect = u.Rect2i.create(
-            el.scroll_offset().add(.create(.one, .one)),
-            .create(
-                grid_size.subtract(.one),
-                grid_size.subtract(.one),
-            ),
-        );
-        text1_el.frame(draw.sub(text1_rect, text1_rect));
-        
-        const text2_el = el.text2.get_element();
-        const text2_rect = u.Rect2i.create(
-            el.scroll_offset().move_right(grid_size),
-            el.text2.get_size(draw.cr),
-        );
-        text2_el.frame(draw.sub(text2_rect, text2_rect));
     }
     
     pub fn pointer_start(el: *Test_element, info: ui.Pointer_context) void {
-        const text1_rect = u.Rect2i.create(
-            el.scroll_offset().add(.create(.one, .one)),
-            .create(
-                grid_size.subtract(.one),
-                grid_size.subtract(.one),
-            ),
-        );
-        if (info.sub(text1_rect)) |child_info| {
-            const text1_el = el.text1_scroll.get_element();
-            text1_el.pointer_start(child_info);
-        }
         if (info.create_click_handler()) |click_handler| {
             click_handler.* = ui.click_handler.dynamic(Click_handler.create(el, info.pos));
         }
@@ -326,7 +252,6 @@ pub const Test_element = struct {
         _ = cr;
         el.auto_buildup = .zero;
         el.auto_velocity = velocity;
-        //@panic("Test");
         return .zero;
     }
     

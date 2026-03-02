@@ -376,8 +376,8 @@ const Read_result = union(enum) {
     
     pub fn is_literal(result: Read_result) bool {
         return switch (result) {
-            .normal => |_| false,
-            .literal => |_| true,
+            .normal => false,
+            .literal => true,
             .end => false,
         };
     }

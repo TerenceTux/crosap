@@ -109,7 +109,7 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             };
             
             pub fn init(content: *Content, capacity: usize) void {
-                u.assert(u.next_power_of_two(@intCast(capacity)) == capacity);
+                u.assert(u.next_power_of_two(capacity) == capacity);
                 content.items = u.alloc_slice(?Item, capacity);
                 for (content.items) |*item| {
                     item.* = null;
@@ -268,8 +268,12 @@ fn Custom_map(Key: type, Value: type, fns: type) type {
             }
         }
         
-        pub fn get_ptr(map: *This, key: Key) ?*Value {
+        pub fn get_mut(map: *This, key: Key) ?*Value {
             return map.content.get_ptr(key);
+        }
+        
+        pub fn get_ptr(map: *This, key: Key) ?*const Value {
+            return map.get_mut(key);
         }
         
         pub fn get(map: *This, key: Key) ?Value {

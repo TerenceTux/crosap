@@ -32,7 +32,7 @@ pub const activity = u.interface(struct {
                 s.imp.call(.export_data, .{cr, writer});
             }
             
-            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real) void {
+            pub fn update(s: Selfp, cr: *Crosap, dtime: u.Real) Keyboard_info {
                 return s.imp.call(.update, .{cr, dtime});
             }
             

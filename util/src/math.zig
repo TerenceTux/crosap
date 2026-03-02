@@ -1,7 +1,6 @@
 const Real = @import("number.zig").Real;
 const Vec2r = @import("vec.zig").Vec2r;
 const assert = @import("util.zig").assert;
-const u = @import("util.zig");
 
 pub fn move_linear_to(current: Real, target: Real, dtime: Real, max_speed: Real) Real {
     assert(dtime.higher_or_equal(.zero));
@@ -70,10 +69,10 @@ pub fn move_smooth_to(current: *Real, speed: *Real, target: Real, dtime: Real, m
     
     if (to_left) {
         speed.* = end_speed.negate();
-        current.mut_subtract(moved);
+        current.decrease(moved);
     } else {
         speed.* = end_speed;
-        current.mut_add(moved);
+        current.increase(moved);
     }
 }
 
@@ -81,12 +80,9 @@ pub fn move_smooth_to(current: *Real, speed: *Real, target: Real, dtime: Real, m
 pub fn move_smooth_to2(current: *Vec2r, speed: *Vec2r, target: Vec2r, dtime: Real, max_accel: Real) void {
     assert(dtime.higher_or_equal(.zero));
     assert(max_accel.higher_or_equal(.zero));
-    u.log_start(.{"Start to move from ",current.*," to ",target," with speed ",speed.*,", dtime: ",dtime,", max_accel: ",max_accel});
-    defer u.log_end(.{});
     
     const start_speed = speed.*;
     const diff = current.offset_to(target);
-    u.log(.{"Diff: ",diff});
     
     var dir1 = Vec2r.create(.from_int(1), .from_int(0));
     var target1 = Real.zero;
@@ -105,5 +101,5 @@ pub fn move_smooth_to2(current: *Vec2r, speed: *Vec2r, target: Vec2r, dtime: Rea
     
     speed.* = dir1.scale(speed1).add(dir2.scale(speed2));
     const movement = dir1.scale(move1).add(dir2.scale(move2));
-    current.mut_add(movement);
+    current.increase(movement);
 }

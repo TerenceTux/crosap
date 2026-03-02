@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Enum_literal = @Type(.enum_literal);
+const Enum_literal = @TypeOf(.enum_literal);
 
 pub fn interface(info: type) type {
     const Interface_function = struct {
@@ -24,48 +24,21 @@ pub fn interface(info: type) type {
     }
     const functions = functions_mut;
     
-    var function_table_fields: [functions.len]std.builtin.Type.StructField = undefined;
-    for (functions, &function_table_fields) |function, *table_field| {
-        table_field.name = function.name;
-        var fn_params: [1 + function.arguments.len]std.builtin.Type.Fn.Param = undefined;
-        fn_params[0] = .{
-            .is_generic = false,
-            .is_noalias = false,
-            .type = *anyopaque,
-        };
+    var function_table_names: [functions.len][]const u8 = undefined;
+    var function_table_types: [functions.len]type = undefined;
+    for (functions, &function_table_names, &function_table_types) |function, *table_name, *table_type| {
+        table_name.* = function.name;
+        var fn_params: [1 + function.arguments.len]type = undefined;
+        fn_params[0] = *anyopaque;
         for (function.arguments, fn_params[1..]) |argument_type, *param| {
-            param.is_generic = false;
-            param.is_noalias = false;
-            param.type = argument_type;
+            param.* = argument_type;
         }
-        const fn_type = @Type(.{.@"fn" = .{
-            .calling_convention = .auto,
-            .is_generic = false,
-            .is_var_args = false,
-            .return_type = function.return_type,
-            .params = &fn_params,
-        }});
-        table_field.type = @Type(.{.@"pointer" = .{
-            .size = .one,
-            .is_const = true,
-            .is_volatile = false,
-            .alignment = @alignOf(fn_type),
-            .address_space = .generic,
-            .child = fn_type,
-            .is_allowzero = false,
-            .sentinel_ptr = null,
-        }});
-        table_field.default_value_ptr = null;
-        table_field.is_comptime = false;
-        table_field.alignment = @alignOf(table_field.type);
+        const param_attrs: [1 + function.arguments.len]std.builtin.Type.Fn.Param.Attributes = @splat(.{});
+        const fn_type = @Fn(&fn_params, &param_attrs, function.return_type, .{});
+        table_type.* = *const fn_type;
     }
     
-    const Function_table = @Type(.{.@"struct" = .{
-        .layout = .auto,
-        .fields = &function_table_fields,
-        .decls = &.{},
-        .is_tuple = false,
-    }});
+    const Function_table = @Struct(.auto, null, &function_table_names, &function_table_types, &@splat(.{}));
     
     return struct {
         fn find_function(comptime tag: Enum_literal) Interface_function {

@@ -45,11 +45,11 @@ pub const Int = struct {
         ).clamp(bound_min, bound_max);
     }
     
-    pub fn mut_add(v: *Int, v2: Int) void {
+    pub fn increase(v: *Int, v2: Int) void {
         v.* = v.add(v2);
     }
     
-    pub fn mut_add_bounded(v: *Int, v2: Int) void {
+    pub fn increase_bounded(v: *Int, v2: Int) void {
         v.* = v.add_bounded(v2);
     }
     
@@ -65,11 +65,11 @@ pub const Int = struct {
         ).clamp(bound_min, bound_max);
     }
     
-    pub fn mut_subtract(v: *Int, v2: Int) void {
+    pub fn decrease(v: *Int, v2: Int) void {
         v.* = v.subtract(v2);
     }
     
-    pub fn mut_subtract_bounded(v: *Int, v2: Int) void {
+    pub fn decrease_bounded(v: *Int, v2: Int) void {
         v.* = v.subtract_bounded(v2);
     }
     
@@ -151,22 +151,6 @@ pub const Int = struct {
             }
         }
         return v;
-    }
-    
-    pub fn increase_by(i: *Int, by: Int) void {
-        i.v += by.v;
-    }
-    
-    pub fn increase(i: *Int) void {
-        i.v += 1;
-    }
-    
-    pub fn decrease_by(i: *Int, by: Int) void {
-        i.v -= by.v;
-    }
-    
-    pub fn decrease(i: *Int) void {
-        i.v -= 1;
     }
     
     pub fn clamp(i: Int, lowest: Int, highest: Int) Int {
@@ -336,11 +320,11 @@ pub const Real = struct {
         }).clamp(bound_min, bound_max);
     }
     
-    pub fn mut_add(v: *Real, v2: Real) void {
+    pub fn increase(v: *Real, v2: Real) void {
         v.* = v.add(v2);
     }
     
-    pub fn mut_add_bounded(v: *Real, v2: Real) void {
+    pub fn increase_bounded(v: *Real, v2: Real) void {
         v.* = v.add_bounded(v2);
     }
     
@@ -368,11 +352,11 @@ pub const Real = struct {
         }).clamp(bound_min, bound_max);
     }
     
-    pub fn mut_subtract(v: *Real, v2: Real) void {
+    pub fn decrease(v: *Real, v2: Real) void {
         v.* = v.subtract(v2);
     }
     
-    pub fn mut_subtract_bounded(v: *Real, v2: Real) void {
+    pub fn decrease_bounded(v: *Real, v2: Real) void {
         v.* = v.subtract_bounded(v2);
     }
     
@@ -638,5 +622,13 @@ pub const Real = struct {
     
     pub fn atan(r: Real) Real {
         return .from_float(std.math.atan(r.to_float(f32)));
+    }
+    
+    pub fn average(numbers: []const Real) Real {
+        var sum = Real.zero;
+        for (numbers) |number| {
+            sum.increase(number);
+        }
+        return sum.divide(.from_int(numbers.len));
     }
 };

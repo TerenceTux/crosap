@@ -1,4 +1,5 @@
 const std = @import("std");
+const u = @import("util.zig");
 const Type = std.builtin.Type;
 
 
@@ -9,34 +10,17 @@ pub const Field = struct {
 
 pub fn create_tagged_union(fields: []const Field) type {
     const count = fields.len;
-    var union_fields: [count]Type.UnionField = undefined;
-    var enum_fields: [count]Type.EnumField = undefined;
-    for (&union_fields, &enum_fields, fields, 0..) |*union_field, *enum_field, field_info, i| {
-        union_field.* = .{
-            .name = field_info.name,
-            .type = field_info.type,
-            .alignment = @alignOf(field_info.type),
-        };
-        enum_field.* = .{
-            .name = field_info.name,
-            .value = i,
-        };
+    const Tag_int = u.Uint_that_fits(count - 1);
+    
+    var names: [count][]const u8 = undefined;
+    var values: [count]Tag_int = undefined;
+    var types: [count]type = undefined;
+    for (&names, &values, &types, fields, 0..) |*name, *value, *field_type, field_info, i| {
+        name.* = field_info.name;
+        value.* = @intCast(i);
+        field_type.* = field_info.type;
     }
     
-    const Tag = @Type(.{
-        .@"enum" = .{
-            .tag_type = usize,
-            .fields = &enum_fields,
-            .decls = &.{},
-            .is_exhaustive = true,
-        },
-    });
-    return @Type(.{
-        .@"union" = .{
-            .layout = .auto,
-            .tag_type = Tag,
-            .fields = &union_fields,
-            .decls = &.{},
-        },
-    });
+    const Tag_type = @Enum(Tag_int, .exhaustive, &names, &values);
+    return @Union(.auto, Tag_type, &names, &types, &@splat(.{}));
 }

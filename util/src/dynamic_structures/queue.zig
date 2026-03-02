@@ -101,7 +101,7 @@ pub fn Queue(Type: type) type {
         fn ensure_capacity(queue: *Self, capacity: usize) void {
             const old_capacity = queue.buffer.len;
             if (old_capacity < capacity) {
-                const new_capacity: usize = u.next_power_of_two(@intCast(capacity));
+                const new_capacity: usize = u.next_power_of_two(capacity);
                 queue.buffer = u.realloc(queue.buffer, new_capacity);
                 
                 u.assert(new_capacity >= old_capacity * 2);

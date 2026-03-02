@@ -37,11 +37,11 @@ pub const Vec2i = struct {
         );
     }
     
-    pub fn mut_add(v: *Vec2i, v2: Vec2i) void {
+    pub fn increase(v: *Vec2i, v2: Vec2i) void {
         v.* = v.add(v2);
     }
     
-    pub fn mut_add_bounded(v: *Vec2i, v2: Vec2i) void {
+    pub fn increase_bounded(v: *Vec2i, v2: Vec2i) void {
         v.* = v.add_bounded(v2);
     }
     
@@ -59,11 +59,11 @@ pub const Vec2i = struct {
         );
     }
     
-    pub fn mut_subtract(v: *Vec2i, v2: Vec2i) void {
+    pub fn decrease(v: *Vec2i, v2: Vec2i) void {
         v.* = v.subtract(v2);
     }
     
-    pub fn mut_subtract_bounded(v: *Vec2i, v2: Vec2i) void {
+    pub fn decrease_bounded(v: *Vec2i, v2: Vec2i) void {
         v.* = v.subtract_bounded(v2);
     }
     
@@ -145,11 +145,11 @@ pub const Vec2r = struct {
         );
     }
     
-    pub fn mut_add(v: *Vec2r, v2: Vec2r) void {
+    pub fn increase(v: *Vec2r, v2: Vec2r) void {
         v.* = v.add(v2);
     }
     
-    pub fn mut_add_bounded(v: *Vec2r, v2: Vec2r) void {
+    pub fn increase_bounded(v: *Vec2r, v2: Vec2r) void {
         v.* = v.add_bounded(v2);
     }
     
@@ -167,11 +167,11 @@ pub const Vec2r = struct {
         );
     }
     
-    pub fn mut_subtract(v: *Vec2r, v2: Vec2r) void {
+    pub fn decrease(v: *Vec2r, v2: Vec2r) void {
         v.* = v.subtract(v2);
     }
     
-    pub fn mut_subtract_bounded(v: *Vec2r, v2: Vec2r) void {
+    pub fn decrease_bounded(v: *Vec2r, v2: Vec2r) void {
         v.* = v.subtract_bounded(v2);
     }
     
@@ -268,11 +268,11 @@ pub const Vec2r = struct {
         return .create(v.x, v.y.add(amount));
     }
     
-    fn base_increase_result(base: u.Real, increase: u.Real) u.Real {
+    fn base_increase_result(base: u.Real, increase_with: u.Real) u.Real {
         if (base.lower_than(.from_float(0.000001))) {
             return .one;
         }
-        const fraction = increase.divide(base);
+        const fraction = increase_with.divide(base);
         const to_hpi = std.math.atan(fraction.to_float(f32));
         return .from_float(to_hpi / (@as(f32, std.math.pi) / 2));
     }
@@ -308,6 +308,14 @@ pub const Vec2r = struct {
     
     pub fn equal_exact(v1: Vec2r, v2: Vec2r) bool {
         return v1.x.equal_exact(v2.x) and v1.y.equal_exact(v2.y);
+    }
+    
+    pub fn average(numbers: []const Vec2r) Vec2r {
+        var sum = Vec2r.zero;
+        for (numbers) |number| {
+            sum.increase(number);
+        }
+        return sum.scale_down(.from_int(numbers.len));
     }
 };
 

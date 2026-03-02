@@ -61,7 +61,7 @@ pub fn Resource_list(Type: type) type {
         pub fn destroy(rl: *Self, index: Index) void {
             switch (rl.items.get(index)) {
                 .free => unreachable,
-                .used => |_| {},
+                .used => {},
             }
             rl.free_items.append(index);
             rl.items.set(index, .free);

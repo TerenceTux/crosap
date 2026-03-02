@@ -54,4 +54,28 @@ Something else: sometimes, the element struct must be allocated on the heap. For
 That simplifies deinit and allows us to use the pointer as identifier. (Otherwise, if an element contains another element as first attribute they have the same memory location.)
 Deiniting elements must be done via Crosap, so we can remove it from our input hashmaps.
 
-A small problem: when an element is resized, we don't know on which side. Even if we solve this, we can never know on which size the window is resized.
+A small problem: when an element is resized, we don't know on which side. Even if we solve this, we can never know on which side the window is resized.
+
+
+======
+
+Functions called on an element.
+For each frame (in order):
+
+update:
+The element should step forward in time.
+This will usually be called if the element is invisible, but will not be called if the element should be inactive.
+It must call update on its (direct) children.
+It can query the size of its children only after updating it. So it's not possible to query the size of an inactive element.
+The element must handle scroll events (if it's scrollable), but only AFTER update has been called on the children.
+The element must determine it's size.
+
+get_size / get_height / get_width (only for fixed / x_flex / y_flex):
+Can be called multiple times, but not before the first update
+You MAY NOT query the size of your children in this function.
+In that case, you should do that in update and store it.
+
+frame:
+Will only be called if the element is visible.
+You must call frame on your children if they are visible.
+

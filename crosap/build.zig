@@ -31,7 +31,7 @@ const targets = std.StaticStringMap(std.Target.Query).initComptime(.{
 });
 
 pub fn app(b: *std.Build, app_main: []const u8) void {
-    var threaded: std.Io.Threaded = .init(b.allocator);
+    var threaded: std.Io.Threaded = .init(b.allocator, .{});
     defer threaded.deinit();
     const io = threaded.io();
     
@@ -46,7 +46,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     const output_option = b.option([]const u8, "output", "The name for the compiled binary. Default is a the app name with the backend and compile target.");
     const release_option = b.option(bool, "release", "True to build a fast release executable, false to build a slower debug version");
     
-    b.build_root.handle.access(app_main, .{}) catch {
+    b.build_root.handle.access(io, app_main, .{}) catch {
         std.debug.print("The file {s} does not exist\n", .{app_main});
         return;
     };
@@ -74,12 +74,12 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     
     var options = std.StringHashMapUnmanaged([]const u8).empty;
     if (options_file) |options_file_path| {
-        const file = std.fs.cwd().openFile(options_file_path, .{}) catch {
+        const file = std.Io.Dir.cwd().openFile(io, options_file_path, .{}) catch {
             std.debug.print("The options file {s} does not exist.\n", .{options_file_path});
             b.invalid_user_input = true;
             return;
         };
-        defer file.close();
+        defer file.close(io);
         var buffer: [4096]u8 = undefined;
         var reader = file.reader(io, &buffer);
         const file_content = reader.interface.allocRemaining(b.allocator, .unlimited) catch @panic("no memory");
@@ -118,7 +118,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     const backend_content = options.get("backend") orelse {
         std.debug.print("You need to specify the backend option.\n", .{});
         std.debug.print("For example: -Doptions_direct=backend:preferred_backend,fallback_backend(option:value)\n", .{});
-        show_available_backends(crosap_dep);
+        show_available_backends(crosap_dep, io);
         return;
     };
     const backend_items = option_parse_list(b.allocator, backend_content) catch @panic("invalid backend option");
@@ -166,17 +166,17 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     crosap_api.addImport("util", util);
     
     var backends = std.StringHashMapUnmanaged(*std.Build.Module).empty;
-    var backends_dir = crosap_dep.builder.build_root.handle.openDir("backends", .{}) catch @panic("backends directory not found");
-    defer backends_dir.close();
+    var backends_dir = crosap_dep.builder.build_root.handle.openDir(io, "backends", .{}) catch @panic("backends directory not found");
+    defer backends_dir.close(io);
     for (backend_items) |backend_name| {
-        var backend_dir = backends_dir.openDir(backend_name, .{}) catch {
+        var backend_dir = backends_dir.openDir(io, backend_name, .{}) catch {
             std.debug.print("The backend '{s}' does not exist.\n", .{backend_name});
             b.invalid_user_input = true;
             return;
         };
-        defer backend_dir.close();
+        defer backend_dir.close(io);
         
-        backend_dir.access("backend.zig", .{}) catch {
+        backend_dir.access(io, "backend.zig", .{}) catch {
             std.debug.print("The backend file '{s}/backend.zig' does not exist.\n", .{backend_name});
             b.invalid_user_input = true;
             return;
@@ -189,7 +189,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         backend.addImport("util", util);
         backend.addImport("crosap_api", crosap_api);
         
-        if (backend_dir.readFileAlloc("dependencies.txt", b.allocator, .unlimited)) |dependency_data| {
+        if (backend_dir.readFileAlloc(io, "dependencies.txt", b.allocator, .unlimited)) |dependency_data| {
             var lines_iterator = std.mem.tokenizeScalar(u8, dependency_data, '\n');
             while (lines_iterator.next()) |line| {
                 const dep_info = parse_dependency_line(line) orelse continue;
@@ -199,11 +199,11 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
                 var dep: *std.Build.Module = undefined;
                 if (std.mem.eql(u8, dep_lib, "@render")) {
                     const dep_path = std.fmt.allocPrint(b.allocator, "render/{s}", .{dep_mod}) catch @panic("no memory");
-                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
+                    dep = create_backend_lib_module(b, io, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
                     dep.addImport("util", util);
                 } else if (std.mem.eql(u8, dep_lib, "@audio")) {
                     const dep_path = std.fmt.allocPrint(b.allocator, "audio/{s}", .{dep_mod}) catch @panic("no memory");
-                    dep = create_backend_lib_module(b, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
+                    dep = create_backend_lib_module(b, io, crosap_dep, dep_path, util, &link_static, target_os, target_arch, release_option) orelse return;
                     dep.addImport("util", util);
                 } else {
                     const lib = crosap_dep.builder.lazyDependency(dep_lib, .{
@@ -285,6 +285,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
             .name = output_name,
             .root_module = main,
             .linkage = .dynamic,
+            //.use_llvm = true,
         };
         const exe = b.addExecutable(exe_options);
         if (build_target.result.os.tag == .windows and optimize_mode != .Debug) {
@@ -306,14 +307,14 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     }
 }
 
-fn show_available_backends(crosap_dep: *std.Build.Dependency) void {
-    var backends_dir = crosap_dep.builder.build_root.handle.openDir("backends", .{.iterate = true}) catch @panic("backends directory not found");
+fn show_available_backends(crosap_dep: *std.Build.Dependency, io: std.Io) void {
+    var backends_dir = crosap_dep.builder.build_root.handle.openDir(io, "backends", .{.iterate = true}) catch @panic("backends directory not found");
     var iterator = backends_dir.iterate();
     std.debug.print("Available backends:\n", .{});
-    while (iterator.next() catch @panic("backends iterate error")) |entry| {
+    while (iterator.next(io) catch @panic("backends iterate error")) |entry| {
         std.debug.print("    {s}\n", .{entry.name});
     }
-    backends_dir.close();
+    backends_dir.close(io);
     std.debug.print("\n", .{});
 }
 
@@ -333,9 +334,9 @@ fn name_part_of_path(path: []const u8) []const u8 {
     return path[start..];
 }
 
-fn create_backend_lib_module(b: *std.Build, crosap_dep: *std.Build.Dependency, lib_path: []const u8, util: *std.Build.Module, link_static: *std.StringHashMapUnmanaged(void), target_os: std.Target.Os.Tag, target_arch: std.Target.Cpu.Arch, release: ?bool) ?*std.Build.Module {
-    var dir = crosap_dep.builder.build_root.handle.openDir(lib_path, .{}) catch @panic("backend library not found");
-    defer dir.close();
+fn create_backend_lib_module(b: *std.Build, io: std.Io, crosap_dep: *std.Build.Dependency, lib_path: []const u8, util: *std.Build.Module, link_static: *std.StringHashMapUnmanaged(void), target_os: std.Target.Os.Tag, target_arch: std.Target.Cpu.Arch, release: ?bool) ?*std.Build.Module {
+    var dir = crosap_dep.builder.build_root.handle.openDir(io, lib_path, .{}) catch @panic("backend library not found");
+    defer dir.close(io);
     
     const lib_name = std.fs.path.basename(lib_path);
     const source_path = std.fmt.allocPrint(b.allocator, "{s}/{s}.zig", .{lib_path, lib_name}) catch @panic("no memory");
@@ -344,7 +345,7 @@ fn create_backend_lib_module(b: *std.Build, crosap_dep: *std.Build.Dependency, l
     });
     mod.addImport("util", util);
     
-    if (dir.readFileAlloc("dependencies.txt", b.allocator, .unlimited)) |dependency_data| {
+    if (dir.readFileAlloc(io, "dependencies.txt", b.allocator, .unlimited)) |dependency_data| {
         var lines_iterator = std.mem.tokenizeScalar(u8, dependency_data, '\n');
         while (lines_iterator.next()) |line| {
             const dep_info = parse_dependency_line(line) orelse continue;

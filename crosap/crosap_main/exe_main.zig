@@ -41,7 +41,7 @@ pub fn main() void {
                 .pointer_stop => |event_info| {
                     cr_main.pointer_stop(event_info.pointer);
                 },
-                .quit => |_| {
+                .quit => {
                     u.log(.{"Close button was pressed, so we quit"});
                     u.log_end(.{"Ignore other events"});
                     break:main_loop;

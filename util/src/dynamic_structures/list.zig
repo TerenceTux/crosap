@@ -10,12 +10,17 @@ pub fn List(Type: type) type {
         count: usize,
         
         pub fn init_with_capacity(list: *Self, capacity: usize) void {
-            list.buffer = u.alloc_slice(Type, capacity);
+            list.buffer = u.alloc_slice(Type, u.next_power_of_two(capacity));
             list.count = 0;
         }
         
         pub fn init(list: *Self) void {
             list.init_with_capacity(initial_capacity);
+        }
+        
+        pub fn init_copy_slice(list: *Self, content: []const Type) void {
+            list.init_with_capacity(content.len);
+            list.append_slice(content);
         }
         
         pub fn create_with_capacity(capacity: usize) Self {
@@ -61,7 +66,7 @@ pub fn List(Type: type) type {
         
         pub fn ensure_capacity(list: *Self, capacity: usize) void {
             if (list.buffer.len < capacity) {
-                const new_capacity: usize = u.next_power_of_two(@intCast(capacity));
+                const new_capacity: usize = u.next_power_of_two(capacity);
                 list.buffer = u.realloc(list.buffer, new_capacity);
             }
         }

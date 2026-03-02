@@ -225,25 +225,21 @@ pub const Loader = struct {
     
     const Glfw_errors = b: {
         const result_fields = @typeInfo(types.Error).@"enum".fields;
-        var errors: [result_fields.len]std.builtin.Type.Error = undefined;
-        for (&errors, result_fields) |*error_field, result_field| {
-            error_field.* = .{
-                .name = result_field.name,
-            };
+        var errors = error{};
+        for (result_fields) |result_field| {
+            errors = errors || u.Single_error_set(result_field.name);
         }
-        break:b @Type(.{
-            .error_set = &errors,
-        });
+        break:b errors;
     };
     
-    fn Call_functiontype(function: @Type(.enum_literal)) type {
+    fn Call_functiontype(function: @TypeOf(.enum_literal)) type {
         const function_name = @tagName(function);
         const Function_map = @FieldType(Loader, "fns");
         const fn_pointer = @FieldType(Function_map, function_name);
         return @typeInfo(fn_pointer).@"pointer".child;
     }
     
-    fn Call_arguments(function: @Type(.enum_literal)) type {
+    fn Call_arguments(function: @TypeOf(.enum_literal)) type {
         return std.meta.ArgsTuple(Call_functiontype(function));
     }
     
@@ -255,13 +251,13 @@ pub const Loader = struct {
         }
     }
     
-    fn Call_return_type(function: @Type(.enum_literal)) type {
+    fn Call_return_type(function: @TypeOf(.enum_literal)) type {
         const typeinfo = @typeInfo(Call_functiontype(function));
         const return_type = typeinfo.@"fn".return_type.?;
         return Call_convert_return_type(return_type);
     }
     
-    pub fn call(loader: *Loader, function: @Type(.enum_literal), args: Call_arguments(function)) Call_return_type(function) {
+    pub fn call(loader: *Loader, function: @TypeOf(.enum_literal), args: Call_arguments(function)) Call_return_type(function) {
         const fn_pointer = @field(loader.fns, @tagName(function));
         const result = @call(.auto, fn_pointer, args);
         return loader.check_error(result);

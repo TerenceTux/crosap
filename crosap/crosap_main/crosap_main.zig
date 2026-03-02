@@ -11,6 +11,7 @@ const activity = @import("crosap").activity;
 const Dynamic_element = ui.element.Dynamic_interface;
 
 const init_activity_data: []const u8 = b: {
+    @setEvalBranchQuota(1000000);
     var data = u.List(u8).create();
     var writer = data.writer();
     var bit_writer = u.serialize.create_bit_writer(8, u.writer(u8).static(&writer));
@@ -26,6 +27,7 @@ pub const Crosap_main = struct {
     activity: activity.Dynamic_interface,
     pointers: u.Map(*const Pointer, Pointer_info),
     scroll_movements: u.List(Scroll_movement),
+    audio_sample_counter: u64,
     
     pub fn init(main: *Crosap_main) void {
         u.init();
@@ -55,6 +57,7 @@ pub const Crosap_main = struct {
         u.log_end(.{"Main activity init"});
         
         main.last_update = u.time_seconds();
+        main.audio_sample_counter = @intFromFloat(main.last_update.to_float(f64) * 48000);
     }
     
     pub fn deinit(main: *Crosap_main) void {
@@ -109,11 +112,34 @@ pub const Crosap_main = struct {
         u.log_end(.{});
         
         u.log_start(.{"Frame update"});
-        const dtime = now.subtract(main.last_update);
+        var dtime = now.subtract(main.last_update);
+        if (dtime.higher_than(.one)) {
+            dtime = .one;
+        }
         main.last_update = now;
         
+        const current_audio_samples: u64 = @intFromFloat(now.to_float(f64) * 48000);
+        var needed_audio_samples: usize = 0;
+        if (current_audio_samples > main.audio_sample_counter) {
+            const difference = current_audio_samples - main.audio_sample_counter;
+            if (difference > 48000) {
+                needed_audio_samples = 48000;
+            } else {
+                needed_audio_samples = @intCast(difference);
+            }
+        }
+        main.audio_sample_counter = current_audio_samples;
+        u.log(.{"We need ",needed_audio_samples," audio samples in this frame"});
+        
+        main.cr.audio_to_add.clear();
+        const audio_to_zero = main.cr.audio_to_add.get_append_slice(needed_audio_samples * 2);
+        @memset(audio_to_zero, 0);
+        
+        //std.debug.print("A", .{});
         var movement_index = main.scroll_movements.count;
         while (movement_index > 0) {
+            //std.debug.print("Movement {d}\n", .{movement_index});
+            //u.log(.{"Movement ",movement_index});
             movement_index -= 1;
             const movement = main.scroll_movements.get_mut(movement_index);
             const old_pos = movement.current.round_to_vec2i();
@@ -125,19 +151,19 @@ pub const Crosap_main = struct {
                 movement.speed.length().lower_or_equal(.from_float(0.01))
             })) {
                 for (movement.scroll_chain.items()) |dyn_element| {
-                    const el = dyn_element.to_element();
+                    const el = dyn_element.to_element(); // TODO: What if the element is deinited here?
                     _ = el.scroll_end(&main.cr, .zero);
                 }
                 movement.scroll_chain.deinit();
                 if (movement.pointer) |pointer| {
-                    const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+                    const pointer_info = main.pointers.get_mut(pointer) orelse unreachable;
                     pointer_info.scroll_movement = null;
                 }
                 if (movement_index != main.scroll_movements.count - 1) {
                     movement.* = main.scroll_movements.get(main.scroll_movements.count - 1);
                     // direct the pointer that this scroll movement belongs to, to the new index, since we moved it
                     if (movement.pointer) |pointer| {
-                        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+                        const pointer_info = main.pointers.get_mut(pointer) orelse unreachable;
                         pointer_info.scroll_movement = movement_index;
                     }
                 }
@@ -146,7 +172,8 @@ pub const Crosap_main = struct {
                 main.add_scroll_to_scroll_chain(movement.scroll_chain.items(), moved);
             }
         }
-        // pointers that have no moved this frame still are still scrolling
+        //std.debug.print("A", .{});
+        // pointers that have not moved this frame still are still scrolling
         // (we can't deliver all scrolling here in case the pointer disappeared)
         pointers = main.pointers.iterator_ptr();
         while (pointers.next()) |entry| {
@@ -157,16 +184,15 @@ pub const Crosap_main = struct {
         }
         
         u.log_start(.{"Stepping ",dtime," s"});
+        _ = main.activity.update(&main.cr, dtime);
         const root_element = main.activity.root_element(&main.cr);
         u.log_end(.{"Stepping"});
         
-        if (main.cr.new_frame(dtime)) |draw_context| {
-            root_element.update(&main.cr, dtime, draw_context.size());
-            const gen_element = root_element.get_element();
-            gen_element.frame(draw_context);
-            main.cr.end_frame();
-        }
+        main.cr.update(root_element, dtime);
         main.cr.to_scroll.clear();
+        
+        main.cr.backend.play_audio(main.cr.audio_to_add.items());
+        
         u.log_end(.{});
     }
     
@@ -179,7 +205,7 @@ pub const Crosap_main = struct {
             main.cr.keyboard_state.set(key, false);
             main.activity.key_input(&main.cr, key, .release);
         }
-        u.log_end(.{"Button update handled"});
+        u.log_end(.{"Key update handled"});
     }
     
     pub fn pointer_start(main: *Crosap_main, pointer: *const Pointer) void {
@@ -207,7 +233,7 @@ pub const Crosap_main = struct {
         u.log_start(.{"Pointer ",@intFromPtr(pointer)," updated"});
         pointer.log_state();
         
-        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+        const pointer_info = main.pointers.get_mut(pointer) orelse unreachable;
         if (pointer.button_left != pointer_info.button_left) {
             pointer_info.button_left = pointer.button_left;
             if (pointer.button_left and !pointer_info.button_right and !pointer_info.button_middle) {
@@ -228,9 +254,7 @@ pub const Crosap_main = struct {
                     .scroll_chain = &pointer_info.scroll_chain,
                     .click_handler = &pointer_info.click_handler,
                 };
-                const root_element = main.activity.root_element(&main.cr);
-                const element = root_element.get_element();
-                element.pointer_start(pointer_context);
+                main.cr.pointer_start(pointer_context);
             } else {
                 if (pointer_info.active) {
                     pointer_info.active = false;
@@ -320,7 +344,7 @@ pub const Crosap_main = struct {
                         .otherwise = next,
                     };
                 } else {
-                    gop.value.amount.mut_add(scroll);
+                    gop.value.amount.increase(scroll);
                 }
             } else {
                 if (gop.new) {
@@ -341,9 +365,7 @@ pub const Crosap_main = struct {
             .scroll_chain = null,
             .click_handler = &click_handler,
         };
-        const root_element = main.activity.root_element(&main.cr);
-        const element = root_element.get_element();
-        element.pointer_start(pointer_context);
+        main.cr.pointer_start(pointer_context);
         if (click_handler) |handler| {
             handler.long();
         }
@@ -352,13 +374,13 @@ pub const Crosap_main = struct {
     pub fn pointer_scroll(main: *Crosap_main, pointer: *const Pointer, offset: u.Vec2r) void {
         u.log_start(.{"Pointer ",@intFromPtr(pointer)," scroll: ",offset});
         pointer.log_state();
-        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+        const pointer_info = main.pointers.get_mut(pointer) orelse unreachable;
         const scroll_amount = offset.scale(.from_int(-16));
         if (pointer_info.scroll_movement) |movement_index| {
             const movement = main.scroll_movements.get_mut(movement_index);
             const distance = movement.current.offset_to(movement.target).length();
             const factor = u.Real.from_int(1).add(distance.multiply(u.Real.from_int(1024).inverse()));
-            movement.target.mut_add_bounded(scroll_amount.scale(factor));
+            movement.target.increase_bounded(scroll_amount.scale(factor));
         } else {
             var scroll_chain = u.List(ui.Dynamic_element).create();
             const pointer_context = ui.Pointer_context {
@@ -367,9 +389,7 @@ pub const Crosap_main = struct {
                 .scroll_chain = &scroll_chain,
                 .click_handler = null,
             };
-            const root_element = main.activity.root_element(&main.cr);
-            const element = root_element.get_element();
-            element.pointer_start(pointer_context);
+            main.cr.pointer_start(pointer_context);
             const index = main.scroll_movements.count;
             main.scroll_movements.append(.{
                 .current = .zero,
@@ -387,7 +407,7 @@ pub const Crosap_main = struct {
     pub fn pointer_stop(main: *Crosap_main, pointer: *const Pointer) void {
         u.log_start(.{"Pointer ",@intFromPtr(pointer)," disappeared"});
         pointer.log_state();
-        const pointer_info = main.pointers.get_ptr(pointer) orelse unreachable;
+        const pointer_info = main.pointers.get_mut(pointer) orelse unreachable;
         if (pointer_info.active) {
             if (pointer_info.click_handler) |click_handler| {
                 click_handler.cancel();

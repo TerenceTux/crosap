@@ -100,39 +100,23 @@ pub const Backend = struct {
         break:b result;
     };
     const Variant_type = variant_type: {
-        var fields: [order.len]std.builtin.Type.EnumField = undefined;
-        for (&fields, order, 0..) |*field, name, index| {
-            field.* = .{
-                .name = u.comptime_to_string(name),
-                .value = index,
-            };
+        var names: [order.len][]const u8 = undefined;
+        var values: [order.len]usize = undefined;
+        for (&names, &values, order, 0..) |*store_name, *value, name, index| {
+            store_name.* = u.comptime_to_string(name);
+            value.* = index;
         }
-        break:variant_type @Type(.{
-            .@"enum" = .{
-                .tag_type = usize,
-                .fields = &fields,
-                .decls = &.{},
-                .is_exhaustive = true,
-            },
-        });
+        break:variant_type @Enum(usize, .exhaustive, &names, &values);
     };
     const Variants = variants: {
-        var fields: [allowed_variants.len]std.builtin.Type.UnionField = undefined;
-        for (&fields, allowed_variants) |*field, variant| {
-            field.* = .{
-                .name = u.comptime_to_string(variant.name),
-                .type = variant.imp,
-                .alignment = @alignOf(variant.imp),
-            };
+        var names: [allowed_variants.len][]const u8 = undefined;
+        var types: [allowed_variants.len]type = undefined;
+        const attrs: [allowed_variants.len]std.builtin.Type.UnionField.Attributes = @splat(.{});
+        for (&names, &types, allowed_variants) |*name, *field_type, variant| {
+            name.* = u.comptime_to_string(variant.name);
+            field_type.* = variant.imp;
         }
-        break:variants @Type(.{
-            .@"union" = .{
-                .layout = .auto,
-                .tag_type = null,
-                .fields = &fields,
-                .decls = &.{},
-            },
-        });
+        break:variants @Union(.auto, null, &names, &types, &attrs);
     };
     const variant_count = order.len;
     
@@ -168,7 +152,7 @@ pub const Backend = struct {
         @panic("all backends failed initializing");
     }
     
-    fn Return_of_function(function: @Type(.enum_literal)) type {
+    fn Return_of_function(function: @TypeOf(.enum_literal)) type {
         var Return_type: ?type = null;
         
         inline for (@typeInfo(Variants).@"union".fields) |field| {
@@ -183,7 +167,7 @@ pub const Backend = struct {
         return Return_type.?;
     }
     
-    fn Arguments_of_function(function: @Type(.enum_literal)) type {
+    fn Arguments_of_function(function: @TypeOf(.enum_literal)) type {
         var Arguments: ?type = null;
         
         inline for (@typeInfo(Variants).@"union".fields) |field| {
@@ -203,7 +187,7 @@ pub const Backend = struct {
         return Arguments.?;
     }
     
-    fn variant_call(b: *Backend, comptime function: @Type(.enum_literal), args: Arguments_of_function(function)) Return_of_function(function) {
+    fn variant_call(b: *Backend, comptime function: @TypeOf(.enum_literal), args: Arguments_of_function(function)) Return_of_function(function) {
         switch (b.current_variant) {
             inline else => |variant_type| {
                 const current_variant = &@field(b.variants, @tagName(variant_type));
@@ -282,7 +266,7 @@ pub const Backend = struct {
         return true;
     }
     
-    pub fn Return_for_call(function: @Type(.enum_literal)) type {
+    pub fn Return_for_call(function: @TypeOf(.enum_literal)) type {
         const Return_type = Return_of_function(function);
         switch (@typeInfo(Return_type)) {
             .error_union => |error_info| return error_info.payload,
@@ -290,7 +274,7 @@ pub const Backend = struct {
         }
     }
     
-    fn call(b: *Backend, comptime function: @Type(.enum_literal), args: Arguments_of_function(function)) Return_for_call(function) {
+    fn call(b: *Backend, comptime function: @TypeOf(.enum_literal), args: Arguments_of_function(function)) Return_for_call(function) {
         //u.log_start(.{"Backend function ",function," called"});
         if (@typeInfo(Return_of_function(function)) == .error_union) {
             while (true) {
@@ -391,8 +375,6 @@ pub const Backend = struct {
         b.call(.end_frame, .{});
     }
     
-    // TODO: audio
-    
     // The following are called by main
     
     pub fn poll_events(b: *Backend) void {
@@ -401,5 +383,10 @@ pub const Backend = struct {
     
     pub fn get_event(b: *Backend) ?Event {
         return b.call(.get_event, .{});
+    }
+    
+    /// audio is 48khz 16 bit stereo audio
+    pub fn play_audio(b: *Backend, audio: []const i16) void {
+        b.call(.play_audio, .{audio});
     }
 };

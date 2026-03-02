@@ -314,7 +314,8 @@ pub fn Create_imagemap(Drawer_t: type) type {
     const map_size = Drawer_t.size;
     var object_sizes: []const u.Vec2i = &.{};
     var subimg_drawers_build: []const type = &.{};
-    var sub_image_fields_build: []const std.builtin.Type.EnumField = &.{};
+    var sub_image_names_build: []const []const u8 = &.{};
+    var sub_image_values_build: []const u16 = &.{};
     for (@typeInfo(@TypeOf(Drawer_t.images)).@"struct".fields, 0..) |field, index| {
         const name = field.name;
         const Sub_drawer = @field(Drawer_t.images, name);
@@ -331,25 +332,19 @@ pub fn Create_imagemap(Drawer_t: type) type {
         }
         object_sizes = object_sizes ++ .{size};
         subimg_drawers_build = subimg_drawers_build ++ .{Sub_drawer};
-        sub_image_fields_build = sub_image_fields_build ++ .{std.builtin.Type.EnumField {
-            .name = name,
-            .value = index,
-        }};
+        sub_image_names_build = sub_image_names_build ++ .{name};
+        sub_image_values_build = sub_image_values_build ++ .{index};
     }
     const subimg_drawers = u.comptime_slice_to_array(subimg_drawers_build);
-    const sub_image_fields = u.comptime_slice_to_array(sub_image_fields_build);
+    const sub_image_names = u.comptime_slice_to_array(sub_image_names_build);
+    const sub_image_values = u.comptime_slice_to_array(sub_image_values_build);
     const positions = imagemap_create_layout(map_size, object_sizes);
     const sizes = u.comptime_slice_to_array(object_sizes);
     return struct {
         const Image_map = @This();
         pub const Drawer = Drawer_t;
         pub const name = @typeName(Drawer);
-        pub const Sub_image = @Type(.{.@"enum" = .{
-            .tag_type = u16,
-            .fields = &sub_image_fields,
-            .decls = &.{},
-            .is_exhaustive = true,
-        }});
+        pub const Sub_image = @Enum(u16, .exhaustive, &sub_image_names, &sub_image_values);
         
         drawer: Drawer,
         texture: Texture_image,
@@ -647,7 +642,7 @@ pub const Draw_context = struct {
         draw_context.repeated_color(context_rect, t_image, color);
     }
     
-    pub fn sub(draw_context: *const Draw_context, new_rect: u.Rect2i, mask: u.Rect2i) Draw_context {
+    pub fn sub_with_mask(draw_context: *const Draw_context, new_rect: u.Rect2i, mask: u.Rect2i) Draw_context {
         const new_mask = u.Rect2i.create(
             draw_context.area.offset.add(mask.offset.scale_up(draw_context.cr.scale)),
             mask.size.scale_up(draw_context.cr.scale),
@@ -661,6 +656,10 @@ pub const Draw_context = struct {
             .cr = draw_context.cr,
             .dtime = draw_context.dtime,
         };
+    }
+    
+    pub fn sub(draw_context: *const Draw_context, new_rect: u.Rect2i) Draw_context {
+        return draw_context.sub_with_mask(new_rect, new_rect);
     }
 };
 

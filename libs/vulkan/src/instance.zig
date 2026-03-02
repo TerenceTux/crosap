@@ -51,7 +51,7 @@ pub const Instance = struct {
         }
     }
     
-    pub fn call(instance: *Instance, function: @Type(.enum_literal), args: get_command(function).Call_arguments()) get_command(function).Call_return_type() {
+    pub fn call(instance: *Instance, function: @TypeOf(.enum_literal), args: get_command(function).Call_arguments()) get_command(function).Call_return_type() {
         const command = get_command(function);
         const function_pointer = @field(instance.fns, @tagName(function));
         return command.call(function_pointer, args);
