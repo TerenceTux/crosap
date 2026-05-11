@@ -26,7 +26,6 @@ pub const Crosap = struct {
     should_close: bool,
     keyboard_state: std.EnumArray(Key, bool),
     to_scroll: u.Map(Dynamic_element, To_scroll_info),
-    audio_buffer: u.Audio_buffer,
     audio_to_add: u.List(i16),
     elements: u.Map(Dynamic_element, Element_info),
     root_element: Dynamic_element,

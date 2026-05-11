@@ -7,7 +7,7 @@ pub const Audio = struct {
     device: lib_portaudio.Device,
     stream: lib_portaudio.Stream,
     stream_callback: Stream_callback,
-    buffer: u.Audio_buffer,
+    buffer: u.audio.Buffer,
     
     const Stream_callback = struct {
         a: *Audio,

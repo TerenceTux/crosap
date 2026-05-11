@@ -275,7 +275,7 @@ fn parse_struct(T: type, text: *[]const u8, s_end: []const u8) !T {
     
     const fields = @typeInfo(T).@"struct";
     var result: T = undefined;
-    var fields_set = [1]bool {false} ** fields.len;
+    var fields_set: [fields.len]bool = @splat(false);
     
     const name_end = if (string_is_exact(end, ")")) (
         "):"

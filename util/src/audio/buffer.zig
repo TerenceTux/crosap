@@ -1,4 +1,4 @@
-const u = @import("util.zig");
+const u = @import("../util.zig");
 const std = @import("std");
 
 /// Stores at most 1 seconds of 48KHz 16-bit stereo audio.
@@ -8,7 +8,7 @@ const std = @import("std");
 /// Small drift will be corrected (up to 0.1% difference)
 /// The producer and consumer should write/read at an consistent rate, though some fluctuation is allowed.
 /// In that case, the delay of this buffer should be between 1 and 3 times the highest call interval.
-pub const Audio_buffer = struct {
+pub const Buffer = struct {
     const rate = 48000;
     const max_samples = 1 * rate;
     content: []i16,
@@ -19,7 +19,7 @@ pub const Audio_buffer = struct {
     count_to_discard: usize, // when 0, the next added sample must be discarded. This must then be reset to 1000 so 0.1% of the samples are being discarded.
     count_to_double: usize,
     
-    pub fn init(buffer: *Audio_buffer) void {
+    pub fn init(buffer: *Buffer) void {
         buffer.content = u.alloc_slice(i16, max_samples * 2 + 2); // We can't fill it entirely because then start == end
         buffer.start = 0;
         buffer.end = 0;
@@ -29,11 +29,11 @@ pub const Audio_buffer = struct {
         buffer.count_to_discard = 500;
     }
     
-    pub fn deinit(buffer: *Audio_buffer) void {
+    pub fn deinit(buffer: *Buffer) void {
         u.free_slice(buffer.content);
     }
     
-    pub fn add_audio(buffer: *Audio_buffer, audio: []const i16) void {
+    pub fn add_audio(buffer: *Buffer, audio: []const i16) void {
         // Before adding the audio to the buffer, we preferably want the audio buffer to store around 1 until 2 frames of audio.
         // We can keep track of the 8 points and use this to calculate a variation.
         // Or: the variation is either the current added audio or the last removed audio
@@ -90,7 +90,7 @@ pub const Audio_buffer = struct {
         @atomicStore(usize, &buffer.end, buffer_end, .release);
     }
     
-    pub fn get_audio(buffer: *Audio_buffer, channel_type: Channel_type, T: type, output_rate: usize, audio: []T) void {
+    pub fn get_audio(buffer: *Buffer, channel_type: Channel_type, T: type, output_rate: usize, audio: []T) void {
         // seconds_per_element = 1 / output_rate
         // samples_per_second = rate
         // samples_per_element = seconds_per_element * samples_per_second = rate / output_rate
@@ -159,7 +159,7 @@ pub const Audio_buffer = struct {
         @atomicStore(usize, &buffer.last_consume_size, samples_read, .release);
     }
     
-    fn buffer_read(buffer: *Audio_buffer, index: usize) u.Real {
+    fn buffer_read(buffer: *Buffer, index: usize) u.Real {
         return u.Real.from_int(buffer.content[index]).divide(.from_int(32768));
     }
     

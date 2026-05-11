@@ -913,7 +913,7 @@ pub const Render = struct {
             .draw_objects = undefined,
             .draw_count = 0,
             .already_drawn = false,
-            .using_images = [1]?*lib_vulkan.Image { null } ** textures_per_rendering,
+            .using_images = @splat(null),
         };
         return .create(.create(use_size.width), .create(use_size.height));
     }
@@ -999,7 +999,7 @@ const Swapimage = struct {
             .indirect_buffer = indirect_buffer,
             .is_rendering = false,
             .render_done_fence = render_done_fence,
-            .bound_images = [1]lib_vulkan.types.Image_view { r.dummy_image.image.view } ** textures_per_rendering,
+            .bound_images = @splat(r.dummy_image.image.view),
         };
     }
     
@@ -1078,7 +1078,7 @@ pub const Draw_frame = struct {
         
         draw_frame.already_drawn = true;
         draw_frame.draw_count = 0;
-        draw_frame.using_images = [1]*lib_vulkan.Image { dummy_image } ** textures_per_rendering;
+        draw_frame.using_images = @splat(dummy_image);
         if (present) {
             u.log(.{"Also submit present"});
             try draw_frame.swapimage.r.swapchain.submit_present(draw_frame.index, &.{draw_frame.swapimage.render_finished_semaphore});

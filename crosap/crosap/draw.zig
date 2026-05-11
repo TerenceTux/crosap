@@ -427,8 +427,8 @@ pub fn Create_imagemap(Drawer_t: type) type {
 
 fn imagemap_create_layout(comptime map_size: u.Vec2i, comptime objects: []const u.Vec2i) []const u.Vec2i {
     var positions: [objects.len]u.Vec2i = undefined;
-    var space_taken = [1]u.Int {.zero} ** map_size.y.to(usize);
-    var available = [1]bool {true} ** objects.len;
+    var space_taken: [map_size.y.to(usize)]u.Int = @splat(.zero);
+    var available: [objects.len]bool = @splat(true);
     while (true) {
         var best: ?usize = null;
         var best_height = u.Int.zero;

@@ -16,14 +16,14 @@ pub const activities = struct {
     pub const main = Main_activity;
 };
 
-const audio_data = @embedFile("audio.raw");
-const audio_buffer: []const i16 = @ptrCast(@alignCast(audio_data));
+const audio_ogg = @embedFile("jewels.ogg");
 
 const Main_activity = struct {
     root_el: Test_element,
     audio_fase: u.Real,
     audio_beep: bool,
     audio_player: crosap.Audio_player,
+    audio_data: []i16,
     
     pub fn root_element(act: *Main_activity) ui.flexible_element.Dynamic_interface {
         return ui.flexible_element.dynamic(&act.root_el);
@@ -35,11 +35,29 @@ const Main_activity = struct {
         act.audio_fase = .zero;
         act.audio_beep = false;
         
-        act.audio_player.init(audio_buffer);
+        const start = u.time_nanoseconds();
+        var decoded: u.audio.Decoded = .{
+            .channels = 0,
+            .sample_rate = 0,
+            .data = &.{},
+        };
+        for (0..10) |_| {
+            if (decoded.channels != 0) {
+                decoded.free();
+            }
+            decoded = u.audio.decode_ogg_vorbis(audio_ogg) catch @panic("audio decode error");
+        }
+        const took = u.time_nanoseconds() - start;
+        std.debug.print("TOOK {} ms\n", .{took / 1000000 / 10});
+        act.audio_data = decoded.convert(i16, 2, 48000);
+        decoded.free();
+        
+        act.audio_player.init(act.audio_data);
         act.audio_player.repeat = true;
     }
     
     pub fn deinit(act: *Main_activity, cr: *Crosap) void {
+        u.free_slice(act.audio_data);
         cr.deinit_element(&act.root_el);
     }
     

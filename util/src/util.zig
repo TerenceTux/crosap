@@ -44,7 +44,15 @@ pub const Buffered_byte_reader = @import("reader_writer.zig").Buffered_byte_read
 pub const Buffered_byte_writer = @import("reader_writer.zig").Buffered_byte_writer;
 pub const Slice_reader = @import("reader_writer.zig").Slice_reader;
 
-pub const Audio_buffer = @import("audio.zig").Audio_buffer;
+pub const audio = struct {
+    pub const Buffer = @import("audio/buffer.zig").Buffer;
+    
+    pub const ogg = @import("audio/ogg.zig");
+    pub const vorbis = @import("audio/vorbis.zig");
+    
+    pub const decode_ogg_vorbis = @import("audio/file.zig").decode_ogg_vorbis;
+    pub const Decoded = @import("audio/file.zig").Decoded_audio;
+};
 
 pub const drawable = @import("drawing.zig").drawable;
 pub const Draw_point = @import("drawing.zig").Point;

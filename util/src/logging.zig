@@ -72,7 +72,7 @@ pub const Debug_Logger = struct {
                 }
             }
         }
-        if (is_text) {
+        if ((comptime Child == u8) and is_text) {
             if (v.len == 0) {
                 l.stream_write("\"\"");
             } else {
