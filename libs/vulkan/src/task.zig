@@ -101,7 +101,7 @@ pub const Task = struct {
     }
     
     pub fn bind_index_buffer(task: *Task, buffer: types.Buffer) void {
-        task.device.call(.cmd_bind_index_buffer, .{task.command_buffer, buffer, 0, .uint_16});
+        task.device.call(.cmd_bind_index_buffer, .{task.command_buffer, buffer, 0, .uint16});
     }
     
     pub fn bind_descriptor_set(task: *Task, kind: types.Pipeline_bind_point, layout: types.Pipeline_layout, set_number: u32, descriptor_set: types.Descriptor_set) void {

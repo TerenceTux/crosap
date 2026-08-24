@@ -65,7 +65,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("update_portaudio_source.zig"),
                 .target = b.resolveTargetQuery(.{}),
-                .optimize = .Debug,
+                .optimize = .debug,
             }),
         });
         const run_updater = b.addRunArtifact(source_updater);
@@ -79,8 +79,8 @@ pub fn build(b: *std.Build) void {
         mod.addIncludePath(b.path("portaudio/include"));
         mod.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
         if (target_os == .linux) {
-            mod.addLibraryPath(.{.cwd_relative = "/usr/lib"});
-            mod.linkSystemLibrary("asound", .{});
+            //mod.addLibraryPath(.{.cwd_relative = "/usr/lib"});
+            mod.linkSystemLibrary("alsa", .{});
         }
         if (target_os == .windows) {
             mod.linkSystemLibrary("ole32", .{});
@@ -135,7 +135,7 @@ pub fn build(b: *std.Build) void {
         const portaudio_c = b.addTranslateC(.{
             .root_source_file = dummy_source,
             .target = resolved_target,
-            .optimize = if (release) .ReleaseFast else .Debug,
+            .optimize = if (release) .fast else .debug,
         });
         portaudio_c.addIncludePath(b.path("portaudio/include"));
         portaudio_c.addSystemIncludePath(.{.cwd_relative = "/usr/include"});

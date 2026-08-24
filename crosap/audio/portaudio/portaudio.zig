@@ -75,16 +75,16 @@ pub const Audio = struct {
             u.log_end(.{});
         }
         
-        var best_index = a.portaudio.get_default_output_device_index();
-        var current_index: c_int = 0;
-        const device_count = a.portaudio.get_device_count();
-        while (current_index < device_count): (current_index += 1) {
-            const device = a.portaudio.get_device_by_index(current_index);
-            if (std.mem.eql(u8, device.name, "pipewire")) {
-                best_index = current_index;
-                break;
-            }
-        }
+        const best_index = a.portaudio.get_default_output_device_index();
+//         var current_index: c_int = 0;
+//         const device_count = a.portaudio.get_device_count();
+//         while (current_index < device_count): (current_index += 1) {
+//             const device = a.portaudio.get_device_by_index(current_index);
+//             if (std.mem.eql(u8, device.name, "pipewire")) {
+//                 best_index = current_index;
+//                 break;
+//             }
+//         }
         a.device = a.portaudio.get_device_by_index(best_index);
         u.log(.{"Using default output device: ",a.device.name});
         

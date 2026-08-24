@@ -1,6 +1,5 @@
 const std = @import("std");
 const u = @import("util.zig");
-const Type = std.builtin.Type;
 
 
 pub const Field = struct {

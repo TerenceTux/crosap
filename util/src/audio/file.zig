@@ -226,7 +226,7 @@ pub fn decode_ogg_vorbis(encoded: []const u8) !Decoded_audio {
                 return err;
             },
         };
-        u.log(.{"Received packet of ",packet.data.len," bytes for stream ",packet.stream});
+        //u.log(.{"Received packet of ",packet.data.len," bytes for stream ",packet.stream});
         const audio = vorbis_decoder.next(packet.data) catch |err| {
             u.log(.{"Error: ",err});
             return err;

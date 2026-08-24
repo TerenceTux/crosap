@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-//const debug = builtin.mode == .Debug;
 const debug = false;
 const is_space = std.ascii.isWhitespace;
 
@@ -391,11 +390,11 @@ const file_start =
 \\};
 \\
 \\fn Flags_option(Options: type) type {
-\\    const fields = @typeInfo(Options).@"enum".fields;
+\\    const fields = @typeInfo(Options).@"enum".field_names;
 \\    const names: [fields.len][]const u8 = undefined;
 \\    const values: [fields.len]u32 = undefined;
-\\    for (fields, &names, &values, 0..) |field, *name, *value, i| {
-\\        name = field.name;
+\\    for (fields, &names, &values, 0..) |field_name, *name, *value, i| {
+\\        name = field_name;
 \\        value = 1 << i;
 \\    }
 \\    return @Enum(u32, .exhaustive, &names, &values);
@@ -451,9 +450,8 @@ const file_start =
 \\        pub fn debug_print(f: Self, stream: anytype) void {
 \\            u.byte_writer.validate(stream);
 \\            var count: usize = 0;
-\\            const fields = @typeInfo(Option).@"enum".fields;
-\\            inline for (fields) |field| {
-\\                const name = field.name;
+\\            const fields = @typeInfo(Option).@"enum".field_names;
+\\            inline for (fields) |name| {
 \\                if (f.has(@field(Option, name))) {
 \\                    if (count != 0) {
 \\                        stream.write_slice(" + ");
@@ -527,7 +525,7 @@ const file_start =
 \\    pub fn Call_return_type(command: Command) type {
 \\        const Return_type = @typeInfo(command.function).@"fn".return_type.?;
 \\        if (Return_type == Result) {
-\\            const error_count = @typeInfo(command.errors).error_set.?.len;
+\\            const error_count = @typeInfo(command.errors).error_set.error_names.?.len;
 \\            if (error_count == 0) {
 \\                return void;
 \\            } else {
@@ -563,8 +561,6 @@ const file_start =
 \\pub const null_handle: u64 = 0;
 ;
 
-//@compileLog(@Type(.{.error_set = &.{.{.name = "t"}}}).t);
-
 pub const Outputter = struct {
     const Tag = struct {
         name: []const u8,
@@ -577,7 +573,7 @@ pub const Outputter = struct {
     };
     const Enum_value = struct {
         name: []const u8,
-        value: i64,
+        value: i128,
     };
     const Enum = struct {
         type: Enum_type,
@@ -678,6 +674,11 @@ pub const Outputter = struct {
         o.enums.ensureTotalCapacity(alloc, 256) catch @panic("no memory");
         o.aliases = .empty;
         o.aliases.ensureTotalCapacity(alloc, 64) catch @panic("no memory");
+        o.aliases.put(alloc,
+            alloc.dupe(u8, "VkDeviceAddressRangeEXT") catch @panic("No memory"),
+            alloc.dupe(u8, "VkDeviceAddressRangeKHR") catch @panic("No memory"),
+        ) catch @panic("No memory");
+        
         o.commands = .empty;
         o.commands.ensureTotalCapacity(alloc, 64) catch @panic("no memory");
         o.core_versions = std.ArrayList(Extension).initCapacity(alloc, 8) catch @panic("no memory");
@@ -704,7 +705,7 @@ pub const Outputter = struct {
                 if (needs_escape(value.name)) {
                     o.write("@\"");
                 }
-                o.write_snake_case(value.name, false);
+                o.write_lowercase(value.name);
                 if (needs_escape(value.name)) {
                     o.write("\"");
                 }
@@ -947,12 +948,12 @@ pub const Outputter = struct {
                             }
                         } else {
                             const enum_name = last.props.get("name").?;
-                            var value: i64 = undefined;
+                            var value: i128 = undefined;
                             if (props.get("value")) |value_str| {
                                 if (std.mem.startsWith(u8, value_str, "0x")) {
-                                    value = std.fmt.parseInt(i64, value_str[2..], 16) catch @panic("invalid number");
+                                    value = std.fmt.parseInt(i128, value_str[2..], 16) catch @panic("invalid number");
                                 } else {
-                                    value = std.fmt.parseInt(i64, value_str, 10) catch @panic("invalid number");
+                                    value = std.fmt.parseInt(i128, value_str, 10) catch @panic("invalid number");
                                 }
                             } else if (props.get("bitpos")) |bitpos_str| {
                                 const bitpos = std.fmt.parseInt(u6, bitpos_str, 10) catch @panic("invalid number");
@@ -981,20 +982,23 @@ pub const Outputter = struct {
                                     }) catch @panic("no memory");
                                 }
                                 
-                                var value: i64 = undefined;
+                                var value: i128 = undefined;
                                 if (props.get("value")) |value_str| {
-                                    value = std.fmt.parseInt(i64, value_str, 10) catch @panic("invalid number");
+                                    value = std.fmt.parseInt(i128, value_str, 10) catch @panic("invalid number");
                                 } else if (props.get("bitpos")) |bitpos_str| {
                                     const bitpos = std.fmt.parseInt(u6, bitpos_str, 10) catch @panic("invalid number");
+                                    if (debug) {
+                                        std.debug.print("Bitpos: {}\n", .{bitpos});
+                                    }
                                     value = @intCast(@as(u64, 1) << bitpos);
                                 } else if (props.get("offset")) |offset_str| {
-                                    const offset = std.fmt.parseInt(i64, offset_str, 10) catch @panic("invalid number");
-                                    var extension: ?i64 = null;
+                                    const offset = std.fmt.parseInt(i128, offset_str, 10) catch @panic("invalid number");
+                                    var extension: ?i128 = null;
                                     if (props.get("extnumber")) |extnumber| {
-                                        extension = std.fmt.parseInt(i64, extnumber, 10) catch @panic("invalid number");
+                                        extension = std.fmt.parseInt(i128, extnumber, 10) catch @panic("invalid number");
                                     } else if (strings_equal(parent.name, "extension")) {
                                         if (parent.props.get("number")) |extension_number| {
-                                            extension = std.fmt.parseInt(i64, extension_number, 10) catch @panic("invalid number");
+                                            extension = std.fmt.parseInt(i128, extension_number, 10) catch @panic("invalid number");
                                         }
                                     }
                                     
@@ -1113,9 +1117,11 @@ pub const Outputter = struct {
                     if (is_valid_api(&last.props)) {
                         if (last.props.get("alias")) |alias| {
                             if (last.props.get("name")) |name| {
-                                const key = alloc.dupe(u8, name) catch @panic("no memory");
-                                const value = alloc.dupe(u8, alias) catch @panic("no memory");
-                                o.aliases.put(alloc, key, value) catch @panic("no memory");
+                                if (!o.aliases.contains(name)) {
+                                    const key = alloc.dupe(u8, name) catch @panic("no memory");
+                                    const value = alloc.dupe(u8, alias) catch @panic("no memory");
+                                    o.aliases.put(alloc, key, value) catch @panic("no memory");
+                                }
                             }
                         } else if (strings_equal(category, "struct") or strings_equal(category, "union")) {
                             if (!last.props.contains("alias")) {
@@ -1305,6 +1311,13 @@ pub const Outputter = struct {
                     }) catch @panic("no memory");
                     const command = o.commands.getPtr(name_dup).?;
                     o.check_command_type = &command.type;
+                } else if (strings_equal(command_tag.name, "type") and if (command_tag.props.get("category")) |category| strings_equal(category, "funcpointer") else false) {
+                    set_duplicate(&o.current_return_type, o.current_type.?);
+                    const command_name = o.current_name.?;
+                    o.write_doc_url(command_name);
+                    o.write("pub const ");
+                    o.write_c_type_name(command_name);
+                    o.write(" = *const fn(\n");
                 }
             } else if (strings_equal(last.name, "param")) {
                 if (is_valid_api(&last.props)) {
@@ -1326,6 +1339,12 @@ pub const Outputter = struct {
                                 }
                             }
                         }
+                    } else if (strings_equal(command_tag.name, "type") and if (command_tag.props.get("category")) |category| strings_equal(category, "funcpointer") else false) {
+                        o.write("        ");
+                        o.write_value(o.current_name.?);
+                        o.write(": ");
+                        o.write_c_type(.argument);
+                        o.write(",\n");
                     }
                 }
             } else if (strings_equal(last.name, "command")) {
@@ -1374,43 +1393,43 @@ pub const Outputter = struct {
         
         if (o.last_tag()) |last| {
             if (is_a_type(last)) {
-                const is_funcpointer = if (last.props.get("category")) |category| strings_equal(category, "funcpointer") else false;
-                if (is_funcpointer) {
-                    if (std.mem.startsWith(u8, text, "typedef ") and std.mem.endsWith(u8, text, " (VKAPI_PTR *")) {
-                        set_duplicate(&o.current_return_type, text[8 .. text.len - 13]);
-                    } else if (std.mem.startsWith(u8, text, ")(")) {
-                        if (std.mem.endsWith(u8, text, "const")) {
-                            o.current_is_const = true;
-                        }
-                    } else {
-                        var before_comma: []const u8 = undefined;
-                        if (std.mem.indexOfScalar(u8, text, ',')) |comma_index| {
-                            before_comma = text[0 .. comma_index];
-                        } else if (std.mem.endsWith(u8, text, ");")) {
-                            before_comma = text[0 .. text.len - 2];
-                        } else {
-                            @panic("invalid field");
-                        }
-                        if (text[0] == '*') {
-                            o.current_is_pointer = true;
-                        }
-                        const name = for (before_comma, 0..) |c, i| {
-                            if (std.ascii.isAlphabetic(c)) {
-                                break before_comma[i..];
-                            }
-                        } else @panic("no name");
-                        o.write("    ");
-                        o.write_value(name);
-                        o.write(": ");
-                        o.write_c_type(.argument);
-                        o.write(", \n");
-                        
-                        o.reset_current_type();
-                        if (std.mem.endsWith(u8, text, "const")) {
-                            o.current_is_const = true;
-                        }
-                    }
-                } else if (strings_equal(text, "const") or strings_equal(text, "struct")) {
+//                 const is_funcpointer = if (last.props.get("category")) |category| strings_equal(category, "funcpointer") else false;
+//                 if (is_funcpointer) {
+//                     if (std.mem.startsWith(u8, text, "typedef ") and std.mem.endsWith(u8, text, " (VKAPI_PTR *")) {
+//                         set_duplicate(&o.current_return_type, text[8 .. text.len - 13]);
+//                     } else if (std.mem.startsWith(u8, text, ")(")) {
+//                         if (std.mem.endsWith(u8, text, "const")) {
+//                             o.current_is_const = true;
+//                         }
+//                     } else {
+//                         var before_comma: []const u8 = undefined;
+//                         if (std.mem.indexOfScalar(u8, text, ',')) |comma_index| {
+//                             before_comma = text[0 .. comma_index];
+//                         } else if (std.mem.endsWith(u8, text, ");")) {
+//                             before_comma = text[0 .. text.len - 2];
+//                         } else {
+//                             @panic("invalid field");
+//                         }
+//                         if (text[0] == '*') {
+//                             o.current_is_pointer = true;
+//                         }
+//                         const name = for (before_comma, 0..) |c, i| {
+//                             if (std.ascii.isAlphabetic(c)) {
+//                                 break before_comma[i..];
+//                             }
+//                         } else @panic("no name");
+//                         o.write("    ");
+//                         o.write_value(name);
+//                         o.write(": ");
+//                         o.write_c_type(.argument);
+//                         o.write(", \n");
+//                         
+//                         o.reset_current_type();
+//                         if (std.mem.endsWith(u8, text, "const")) {
+//                             o.current_is_const = true;
+//                         }
+//                     }
+                if (strings_equal(text, "const") or strings_equal(text, "struct")) {
                     o.current_is_const = true;
                 } else if (strings_equal(text, "*")) {
                     o.current_is_pointer = true;
@@ -1436,20 +1455,20 @@ pub const Outputter = struct {
                     }
                 }
             } else if (strings_equal(last.name, "name")) {
-                if (last.props.count() == 0) {
+                //if (last.props.count() == 0) {
                     if (o.tag_up(2)) |parent| {
                         if (is_a_type(parent)) {
-                            const is_funcpointer = if (parent.props.get("category")) |category| strings_equal(category, "funcpointer") else false;
-                            if (is_funcpointer) {
-                                o.define_type(text);
-                                o.write("*const fn(\n");
-                                o.reset_current_type();
-                            } else {
+//                             const is_funcpointer = if (parent.props.get("category")) |category| strings_equal(category, "funcpointer") else false;
+//                             if (is_funcpointer) {
+//                                 o.define_type(text);
+//                                 o.write("*const fn(\n");
+//                                 o.reset_current_type();
+//                             } else {
                                 set_duplicate(&o.current_name, text);
-                            }
+                            //
                         }
                     }
-                }
+                //}
             } else if (strings_equal(last.name, "enum")) {
                 if (last.props.count() == 0) {
                     if (o.tag_up(2)) |parent| {
@@ -1483,6 +1502,9 @@ pub const Outputter = struct {
     }
     
     fn reset_current_type(o: *Outputter) void {
+        if (debug) {
+            std.debug.print("Reset current type\n", .{});
+        }
         set_duplicate(&o.current_name, null);
         set_duplicate(&o.current_type, null);
         o.current_is_const = false;
@@ -1959,6 +1981,12 @@ pub const Outputter = struct {
         }
         if (hold) |holded| {
             o.write_char(std.ascii.toLower(holded));
+        }
+    }
+    
+    fn write_lowercase(o: *Outputter, text: []const u8) void {
+        for (text) |char| {
+            o.write_char(std.ascii.toLower(char));
         }
     }
     

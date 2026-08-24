@@ -162,9 +162,9 @@ pub const Loader = struct {
     pub fn init(loader: *Loader) !void {
         if (comptime static_linked) {
             u.log("Loading static glfw functions");
-            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
-                const c_fn = &@field(glfw_c, field.name);
-                @field(loader.fns, field.name) = @ptrCast(c_fn);
+            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".field_names) |field| {
+                const c_fn = &@field(glfw_c, field);
+                @field(loader.fns, field) = @ptrCast(c_fn);
             }
             
         } else {
@@ -172,15 +172,15 @@ pub const Loader = struct {
             loader.dynlib = try find_dynlib();
             
             u.log("Loading functions");
-            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
-                const fn_type = @TypeOf(@field(loader.fns, field.name));
-                const fn_ptr = loader.dynlib.lookup(fn_type, field.name);
+            inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".field_names) |field| {
+                const fn_type = @TypeOf(@field(loader.fns, field));
+                const fn_ptr = loader.dynlib.lookup(fn_type, field);
                 if (fn_ptr == null) {
-                    u.log(.{"Error getting function ",field.name});
+                    u.log(.{"Error getting function ",field});
                     return error.function_not_available;
                 }
                 
-                @field(loader.fns, field.name) = fn_ptr orelse unreachable;
+                @field(loader.fns, field) = fn_ptr orelse unreachable;
             }
         }
         
@@ -224,10 +224,10 @@ pub const Loader = struct {
     }
     
     const Glfw_errors = b: {
-        const result_fields = @typeInfo(types.Error).@"enum".fields;
+        const result_fields = @typeInfo(types.Error).@"enum".field_names;
         var errors = error{};
         for (result_fields) |result_field| {
-            errors = errors || u.Single_error_set(result_field.name);
+            errors = errors || u.Single_error_set(result_field);
         }
         break:b errors;
     };
@@ -337,7 +337,7 @@ pub const Loader = struct {
     }
     
     pub fn create_window(loader: *Loader, window: *Window, width: u32, height: u32, title: []const u8) !void {
-        const title_z = u.alloc.dupeZ(u8, title) catch @panic("No memory");
+        const title_z = u.alloc.dupeSentinel(u8, title, 0) catch @panic("No memory");
         defer u.alloc.free(title_z);
         
         const result = try loader.call(.glfwCreateWindow, .{@intCast(width), @intCast(height), title_z, null, null});

@@ -5,8 +5,9 @@ const u = @import("util.zig");
 pub fn get_comptime(options: type, T: type, comptime name: []const u8) ?T {
     if (@hasDecl(options, name)) {
         var value = @field(options, name);
-        return parse_value(T, &value, "") catch |err| {
-            std.debug.print("Error parsing {s}: {}", .{value, err});
+        return comptime parse_value(T, &value, "") catch |err| {
+            @compileError("Error parsing " ++ value ++ ": " ++ @errorName(err));
+            //std.debug.print("Error parsing {s}: {}", .{value, err});
         };
     } else {
         return null;
@@ -62,7 +63,7 @@ fn parse_value(T: type, text: *[]const u8, end: []const u8) !T {
                 },
                 .many => @compileError("You can't use a many pointer as option"),
                 .slice => {
-                    if (pointer_info.child == u8 and pointer_info.is_const) {
+                    if (pointer_info.child == u8 and pointer_info.attrs.@"const") {
                         return try parse_text(text, end);
                     } else {
                         return try parse_array(T, text, end);
@@ -95,8 +96,7 @@ fn parse_value(T: type, text: *[]const u8, end: []const u8) !T {
         .@"enum" => |enum_info| {
             const value = try parse_text(text, end);
             defer u.free_slice(value);
-            inline for (enum_info.fields) |field| {
-                const name = field.name;
+            inline for (enum_info.field_names) |name| {
                 if (string_is(value, name)) {
                     return @field(T, name);
                 }
@@ -125,6 +125,7 @@ fn parse_value(T: type, text: *[]const u8, end: []const u8) !T {
             return array;
         },
         .enum_literal => @compileError("You can't use an enum literal as option"),
+        .spirv => @compileError("You can't use spirv values as option"),
     }
 }
 
@@ -341,20 +342,19 @@ fn parse_tagged_union(T: type, text: *[]const u8, end: []const u8) !T {
     
     const union_info = @typeInfo(T).@"union";
     u.assert(union_info.tag_type != null);
-    inline for (union_info.fields) |field| {
-        if (string_is(tag, field.name)) {
-            const Child = field.type;
+    inline for (union_info.field_names, union_info.field_types) |field_name, Child| {
+        if (string_is(tag, field_name)) {
             if (Child == void) {
                 if (has_value) {
                     return error.no_value_for_void_please;
                 }
-                return @unionInit(T, field.name, {});
+                return @unionInit(T, field_name, {});
             } else {
                 if (!has_value) {
                     return error.need_value_for_union;
                 }
                 const value = try parse_value(Child, text, end);
-                return @unionInit(T, field.name, value);
+                return @unionInit(T, field_name, value);
             }
         }
     }

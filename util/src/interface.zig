@@ -9,15 +9,16 @@ pub fn interface(info: type) type {
         return_type: type,
     };
     
-    const members = @typeInfo(info).@"struct".fields;
-    var functions_mut: [members.len]Interface_function = undefined;
-    for (members, &functions_mut) |member, *function| {
-        function.name = member.name;
-        const typeinfo = @typeInfo(member.type).@"fn";
+    const member_names = @typeInfo(info).@"struct".field_names;
+    const member_types = @typeInfo(info).@"struct".field_types;
+    var functions_mut: [member_names.len]Interface_function = undefined;
+    for (member_names, member_types, &functions_mut) |member_name, member_type, *function| {
+        function.name = member_name;
+        const typeinfo = @typeInfo(member_type).@"fn";
         function.return_type = typeinfo.return_type.?;
-        var arguments_var: [typeinfo.params.len]type = undefined;
-        for (typeinfo.params, &arguments_var) |param, *argument_type| {
-            argument_type.* = param.type.?;
+        var arguments_var: [typeinfo.param_types.len]type = undefined;
+        for (typeinfo.param_types, &arguments_var) |param_type, *argument_type| {
+            argument_type.* = param_type.?;
         }
         const arguments = arguments_var;
         function.arguments = &arguments;
@@ -33,7 +34,7 @@ pub fn interface(info: type) type {
         for (function.arguments, fn_params[1..]) |argument_type, *param| {
             param.* = argument_type;
         }
-        const param_attrs: [1 + function.arguments.len]std.builtin.Type.Fn.Param.Attributes = @splat(.{});
+        const param_attrs: [1 + function.arguments.len]std.lang.Type.Fn.ParamAttributes = @splat(.{});
         const fn_type = @Fn(&fn_params, &param_attrs, function.return_type, .{});
         table_type.* = *const fn_type;
     }
@@ -53,7 +54,7 @@ pub fn interface(info: type) type {
         
         fn Args_of(comptime tag: Enum_literal) type {
             const function = find_function(tag);
-            return std.meta.Tuple(function.arguments);
+            return @Tuple(function.arguments);
         }
         
         fn Return_of(comptime tag: Enum_literal) type {
@@ -63,8 +64,8 @@ pub fn interface(info: type) type {
         
         fn function_table_of(Type: type) Function_table {
             var function_table: Function_table = undefined;
-            inline for (@typeInfo(Function_table).@"struct".fields) |field| {
-                @field(function_table, field.name) = @ptrCast(&@field(Type, field.name));
+            inline for (@typeInfo(Function_table).@"struct".field_names) |field_name| {
+                @field(function_table, field_name) = @ptrCast(&@field(Type, field_name));
             }
             return function_table;
         }
@@ -77,7 +78,7 @@ pub fn interface(info: type) type {
             pub fn call(s: Self, comptime tag: Enum_literal, args: Args_of(tag)) Return_of(tag) {
                 const name = @tagName(tag);
                 const arguments = find_function(tag).arguments;
-                const Call_tuple = std.meta.Tuple([1]type {*anyopaque} ++ arguments);
+                const Call_tuple = @Tuple([1]type {*anyopaque} ++ arguments);
                 var call_tuple: Call_tuple = undefined;
                 call_tuple[0] = s.imp;
                 inline for (0..arguments.len) |i| {
@@ -97,7 +98,7 @@ pub fn interface(info: type) type {
                 pub fn call(s: Self, comptime tag: Enum_literal, args: Args_of(tag)) Return_of(tag) {
                     const name = @tagName(tag);
                     const arguments = find_function(tag).arguments;
-                    const Call_tuple = std.meta.Tuple([1]type {*Imp} ++ arguments);
+                    const Call_tuple = @Tuple([1]type {*Imp} ++ arguments);
                     var call_tuple: Call_tuple = undefined;
                     call_tuple[0] = s.imp;
                     inline for (0..arguments.len) |i| {

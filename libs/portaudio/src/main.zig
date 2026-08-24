@@ -9,8 +9,6 @@ const lib_paths = switch(builtin.os.tag) {
     .linux => [_][]const u8 {
         "libportaudio.so.2",
         "libportaudio.so",
-        //"/usr/lib/libglfw.so",
-        //"/usr/lib/libglfw.so.3",
     },
     .windows => [_][]const u8 {
         "portaudio.dll",
@@ -29,9 +27,9 @@ pub const Portaudio = struct {
     pub fn init(pa: *Portaudio) !void {
         if (comptime static_linked) {
             u.log("Loading static portaudio functions");
-            inline for (@typeInfo(@TypeOf(pa.fns)).@"struct".fields) |field| {
-                const c_fn = &@field(portaudio_c, field.name);
-                @field(pa.fns, field.name) = @ptrCast(c_fn);
+            inline for (@typeInfo(@TypeOf(pa.fns)).@"struct".field_names) |field_name| {
+                const c_fn = &@field(portaudio_c, field_name);
+                @field(pa.fns, field_name) = @ptrCast(c_fn);
             }
             
         } else {
@@ -39,15 +37,15 @@ pub const Portaudio = struct {
             pa.dynlib = try find_dynlib();
             
             u.log("Loading functions");
-            inline for (@typeInfo(@TypeOf(pa.fns)).@"struct".fields) |field| {
-                const fn_type = @TypeOf(@field(pa.fns, field.name));
-                const fn_ptr = pa.dynlib.lookup(fn_type, field.name);
+            inline for (@typeInfo(@TypeOf(pa.fns)).@"struct".field_names) |field_name| {
+                const fn_type = @TypeOf(@field(pa.fns, field_name));
+                const fn_ptr = pa.dynlib.lookup(fn_type, field_name);
                 if (fn_ptr == null) {
-                    u.log(.{"Error getting function ",field.name});
+                    u.log(.{"Error getting function ",field_name});
                     return error.function_not_available;
                 }
                 
-                @field(pa.fns, field.name) = fn_ptr orelse unreachable;
+                @field(pa.fns, field_name) = fn_ptr orelse unreachable;
             }
         }
         try pa.fns.Pa_Initialize().handle();

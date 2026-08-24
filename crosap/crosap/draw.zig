@@ -316,8 +316,7 @@ pub fn Create_imagemap(Drawer_t: type) type {
     var subimg_drawers_build: []const type = &.{};
     var sub_image_names_build: []const []const u8 = &.{};
     var sub_image_values_build: []const u16 = &.{};
-    for (@typeInfo(@TypeOf(Drawer_t.images)).@"struct".fields, 0..) |field, index| {
-        const name = field.name;
+    for (@typeInfo(@TypeOf(Drawer_t.images)).@"struct".field_names, 0..) |name, index| {
         const Sub_drawer = @field(Drawer_t.images, name);
         var size: u.Vec2i = undefined;
         if (@hasDecl(Sub_drawer, "image")) {
@@ -696,7 +695,138 @@ pub const Image = struct {
         image.texture.backend.update_texture(
             image.texture.image,
             image.rect,
-            data
+            data,
+        );
+    }
+};
+
+pub const X_flex_image = struct {
+    texture: *Texture_image,
+    flex_rect: u.Rect2i,
+    left: u.Int,
+    right: u.Int,
+    
+    pub fn get_flex(flex_img: X_flex_image) Image {
+        flex_img.texture.get(flex_img.flex_rect);
+    }
+    
+    pub fn get_left(flex_img: X_flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_left(flex_img.left)),
+            .create(flex_img.left, flex_img.flex_rect.height()),
+        );
+    }
+    
+    pub fn get_right(flex_img: X_flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_right(flex_img.flex_rect.width())),
+            .create(flex_img.right, flex_img.flex_rect.height()),
+        );
+    }
+};
+
+pub const Y_flex_image = struct {
+    texture: *Texture_image,
+    flex_rect: u.Rect2i,
+    top: u.Int,
+    bottom: u.Int,
+    
+    pub fn get_flex(flex_img: Y_flex_image) Image {
+        flex_img.texture.get(flex_img.flex_rect);
+    }
+    
+    pub fn get_top(flex_img: Y_flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_up(flex_img.top)),
+            .create(flex_img.flex_rect.width(), flex_img.top),
+        );
+    }
+    
+    pub fn get_bottom(flex_img: Y_flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_down(flex_img.flex_rect.height())),
+            .create(flex_img.flex_rect.width(), flex_img.bottom),
+        );
+    }
+};
+
+pub const Flex_image = struct {
+    texture: *Texture_image,
+    flex_rect: u.Rect2i,
+    left: u.Int,
+    right: u.Int,
+    top: u.Int,
+    bottom: u.Int,
+    
+    pub fn get_flex(flex_img: Y_flex_image) Image {
+        flex_img.texture.get(flex_img.flex_rect);
+    }
+    
+    pub fn get_left(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_left(flex_img.left)),
+            .create(flex_img.left, flex_img.flex_rect.height()),
+        );
+    }
+    
+    pub fn get_right(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_right(flex_img.flex_rect.width())),
+            .create(flex_img.right, flex_img.flex_rect.height()),
+        );
+    }
+    
+    pub fn get_top(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_up(flex_img.top)),
+            .create(flex_img.flex_rect.width(), flex_img.top),
+        );
+    }
+    
+    pub fn get_bottom(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_down(flex_img.flex_rect.height())),
+            .create(flex_img.flex_rect.width(), flex_img.bottom),
+        );
+    }
+    
+    pub fn get_top_left(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_left(flex_img.left).move_up(flex_img.top)),
+            .create(flex_img.left, flex_img.top),
+        );
+    }
+    
+    pub fn get_top_right(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_right(flex_img.flex_rect.width()).move_up(flex_img.top)),
+            .create(flex_img.right, flex_img.top),
+        );
+    }
+    
+    pub fn get_bottom_left(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_left(flex_img.left).move_down(flex_img.flex_rect.height())),
+            .create(flex_img.left, flex_img.bottom),
+        );
+    }
+    
+    pub fn get_bottom_right(flex_img: Flex_image) Image {
+        const flex_pos = flex_img.flex_rect.pos;
+        flex_img.texture.get(
+            .create(flex_pos.move_right(flex_img.flex_rect.width()).move_down(flex_img.flex_rect.height())),
+            .create(flex_img.right, flex_img.bottom),
         );
     }
 };

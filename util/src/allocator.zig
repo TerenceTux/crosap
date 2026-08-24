@@ -5,7 +5,7 @@ const u = @import("util.zig");
 const allocator_to_use = if (u.debug) .debug else if (builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64) .wasm else .fast;
 
 const Alloc_debug = struct {
-    debug_allocator: std.heap.GeneralPurposeAllocator(.{}) = .init,
+    debug_allocator: std.heap.DebugAllocator(.{}) = .init,
     
     pub fn init(alloc_i: *Alloc_debug) std.mem.Allocator {
         return alloc_i.debug_allocator.allocator();

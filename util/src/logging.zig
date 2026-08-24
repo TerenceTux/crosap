@@ -7,6 +7,7 @@ pub const Debug_Logger = struct {
     this_line: u.List(u8),
     line_writer: u.List(u8).Writer,
     stream: u.byte_writer.Static_interface(u.List(u8).Writer),
+    print_buffer: u.List(u8),
     
     last_log: u64,
     
@@ -14,18 +15,30 @@ pub const Debug_Logger = struct {
         l.level = 0;
         l.frame_enabled = false;
         l.last_log = 0;
+        l.this_line.init();
+        l.print_buffer.init_with_capacity(32);
+        l.print_buffer.append_undefined(32);
     }
     
     pub fn deinit(l: *Logger) void {
+        l.this_line.deinit();
+        l.print_buffer.deinit();
         if (l.level != 0) {
             @panic("A log_start was not ended");
         }
     }
     
     fn stream_print(l: *Logger, comptime format: []const u8, args: anytype) void {
-        const text = std.fmt.allocPrint(u.alloc, format, args) catch @panic("no memory");
-        l.stream_write(text);
-        u.alloc.free(text);
+        while (true) {
+            if (std.fmt.bufPrint(l.print_buffer.items_mut(), format, args)) |text| {
+                l.stream_write(text);
+                break;
+            } else |err| {
+                switch (err) {
+                    error.NoSpaceLeft => l.print_buffer.append_undefined(l.print_buffer.count), // double buffer
+                }
+            }
+        }
     }
     
     fn stream_write(l: *Logger, text: []const u8) void {
@@ -36,7 +49,7 @@ pub const Debug_Logger = struct {
         const time = u.time_nanoseconds();
         const time_s = time / 1000_000_000;
         const time_u = time % 1000_000_000;
-        l.this_line.init();
+        l.this_line.clear();
         l.line_writer = l.this_line.writer();
         l.stream = u.byte_writer.static(&l.line_writer);
         if (time - l.last_log >= 100000000) {
@@ -58,7 +71,6 @@ pub const Debug_Logger = struct {
         
         writer.writeAll(l.this_line.items()) catch @panic("print error");
         writer.flush() catch @panic("print error");
-        l.this_line.deinit();
     }
     
     fn print_value_array(l: *Logger, Child: type, v: []const Child) void {
@@ -118,22 +130,22 @@ pub const Debug_Logger = struct {
             .@"struct" => |info| {
                 if (info.is_tuple) {
                     l.stream_write("{");
-                    inline for (info.fields, 0..) |field, i| {
+                    inline for (info.fields_names, 0..) |field_name, i| {
                         if (i != 0) {
                             l.stream_write(", ");
                         }
-                        l.print_value(@field(v, field.name));
+                        l.print_value(@field(v, field_name));
                     }
                     l.stream_write("}");
                 } else {
                     l.stream_write("{");
-                    inline for (info.fields, 0..) |field, i| {
+                    inline for (info.field_names, 0..) |field_name, i| {
                         if (i != 0) {
                             l.stream_write(", ");
                         }
-                        l.stream_write(field.name);
+                        l.stream_write(field_name);
                         l.stream_write(": ");
-                        l.print_value(@field(v, field.name));
+                        l.print_value(@field(v, field_name));
                     }
                     l.stream_write("}");
                 }
@@ -161,6 +173,7 @@ pub const Debug_Logger = struct {
             .@"anyframe" => l.stream_write("<anyframe>"),
             .vector => l.stream_write("<vector>"),
             .enum_literal => l.stream_write(@tagName(v)),
+            .spirv => l.stream_write("<sprirv>"),
         }
     }
     
@@ -168,8 +181,8 @@ pub const Debug_Logger = struct {
         switch (@typeInfo(@TypeOf(v))) {
             .@"struct" => |info| {
                 if (info.is_tuple) {
-                    inline for (info.fields) |field| {
-                        l.print_value(@field(v, field.name));
+                    inline for (info.field_names) |field_name| {
+                        l.print_value(@field(v, field_name));
                     }
                     return;
                 }
@@ -194,7 +207,9 @@ pub const Debug_Logger = struct {
     }
     
     pub fn log_end(l: *Logger, v: anytype) void {
-        std.debug.assert(l.level > 0);
+        if (l.level <= 0) {
+            @panic("too much log_end");
+        }
         l.level -= 1;
         l.start_line();
         l.stream_write(" \x1B[35m<\x1B[0m ");

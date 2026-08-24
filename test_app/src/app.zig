@@ -35,20 +35,12 @@ const Main_activity = struct {
         act.audio_fase = .zero;
         act.audio_beep = false;
         
-        const start = u.time_nanoseconds();
         var decoded: u.audio.Decoded = .{
             .channels = 0,
             .sample_rate = 0,
             .data = &.{},
         };
-        for (0..10) |_| {
-            if (decoded.channels != 0) {
-                decoded.free();
-            }
-            decoded = u.audio.decode_ogg_vorbis(audio_ogg) catch @panic("audio decode error");
-        }
-        const took = u.time_nanoseconds() - start;
-        std.debug.print("TOOK {} ms\n", .{took / 1000000 / 10});
+        decoded = u.audio.decode_ogg_vorbis(audio_ogg) catch @panic("audio decode error");
         act.audio_data = decoded.convert(i16, 2, 48000);
         decoded.free();
         
@@ -96,10 +88,15 @@ const Main_activity = struct {
         if (key == .space) {
             if (event == .press) {
                 act.root_el.color = u.Color.from_byte_rgb(0, 64, 0).to_screen_color();
-                act.audio_player.start();
+                if (act.audio_player.playing) {
+                    act.audio_player.stop();
+                } else {
+                    act.audio_player.start();
+                }
+                //act.audio_player.start();
             } else if (event == .release) {
                 act.root_el.color = u.Color.from_byte_rgb(0, 0, 0).to_screen_color();
-                act.audio_player.stop();
+                //act.audio_player.stop();
             }
         }
         _ = cr;
@@ -206,7 +203,7 @@ pub const Test_element = struct {
         }
         
         ctx.set_child_pos(el.text1_scroll.get_element(), el.scroll_offset().add(.create(.one, .one)));
-        ctx.set_child_pos(el.block2_scroll.get_element(), el.scroll_offset().add(.create(grid_size.add(.one), .one)),);
+        ctx.set_child_pos(el.block2_scroll.get_element(), el.scroll_offset().add(.create(grid_size.add(.one), .one)));
     }
     
     const grid_size = u.Int.create(64);

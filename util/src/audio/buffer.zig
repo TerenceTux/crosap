@@ -26,7 +26,7 @@ pub const Buffer = struct {
         buffer.used_fraction = .zero;
         buffer.last_consume_size = 0;
         buffer.count_to_discard = 500;
-        buffer.count_to_discard = 500;
+        buffer.count_to_double = 500;
     }
     
     pub fn deinit(buffer: *Buffer) void {

@@ -163,7 +163,7 @@ pub fn bytes_equal(a: []const u8, b: []const u8) bool {
 pub var random: std.Random = undefined;
 var rng: std.Random.DefaultPrng = undefined;
 
-pub const debug = builtin.mode == .Debug;
+pub const debug = builtin.mode == .debug;
 
 var start_time: std.Io.Timestamp = undefined;
 
@@ -279,7 +279,7 @@ pub fn write_int_string(to_writer: anytype, inp: anytype, base: u8) void {
                 to_writer.write('-');
                 absolute = -inp;
             }
-            const unsigned: std.meta.Int(.unsigned, inp_info.bits) = @intCast(absolute);
+            const unsigned: @Int(.unsigned, inp_info.bits) = @intCast(absolute);
             write_positive_int_string(to_writer, unsigned, base);
         },
         .unsigned => {
@@ -407,12 +407,12 @@ pub fn comptime_to_string(comptime value: anytype) [:0]const u8 {
 
 pub fn callback(Fn: type) type {
     const Fn_return = @typeInfo(Fn).@"fn".return_type.?;
-    const fn_params = @typeInfo(Fn).@"fn".params;
+    const fn_params = @typeInfo(Fn).@"fn".param_types;
     var fn_argslist: [fn_params.len]type = undefined;
     for (&fn_argslist, fn_params) |*argtype, param| {
-        argtype.* = param.type.?;
+        argtype.* = param.?;
     }
-    const Fn_argstuple = std.meta.Tuple(&fn_argslist);
+    const Fn_argstuple = @Tuple(&fn_argslist);
     return interface(struct {
         call: Fn,
         

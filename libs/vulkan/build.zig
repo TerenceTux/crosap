@@ -7,18 +7,22 @@ pub fn build(b: *std.Build) void {
     _ = b.option(bool, "release", "Compile with optimizations") orelse false;
     const util = b.dependency("util", .{}).module("util");
     
+    const header_getter = b.addSystemCommand(&.{"git", "clone", "-q", "https://github.com/KhronosGroup/Vulkan-Headers.git"});
+    const header_dir = header_getter.addOutputDirectoryArg2("vulkan_headers", .{});
+    b.addNamedLazyPath("headers", header_dir.path(b, "include"));
+
     const binding_generator = b.addExecutable(.{
         .name = "generate_bindings",
         .root_module = b.createModule(.{
             .target = b.resolveTargetQuery(.{}),
-            .optimize = .ReleaseFast,
+            .optimize = .debug,
             .root_source_file = b.path("bindings/generate.zig"),
         }),
     });
     
     const bindings_runner = b.addRunArtifact(binding_generator);
-    bindings_runner.setCwd(b.path("bindings"));
-    bindings_runner.addFileArg(b.path("bindings/vk.xml"));
+    //bindings_runner.setCwd(b.path("bindings"));
+    bindings_runner.addFileArg(header_dir.path(b, "registry/vk.xml"));
     const bindings_file = bindings_runner.addOutputFileArg("bindings.zig");
     
     const bindings_mod = b.addModule("types", .{

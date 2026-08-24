@@ -49,7 +49,7 @@ pub const Decoder = struct {
             error.EndOfStream => return error.end,
             else => return err,
         };
-        u.log(.{"Header: ",header});
+        //u.log(.{"Header: ",header});
         if (!std.mem.eql(u8, header[0..4], "OggS")) {
             return error.wrong_capture;
         }
@@ -60,7 +60,6 @@ pub const Decoder = struct {
         const header_type = header[4];
         const current_page = &decoder.current_page;
         current_page.continued = header_type & 0x01 != 0;
-        u.log(.{"Continued: ",current_page.continued});
         current_page.begin_of_stream = header_type & 0x02 != 0;
         current_page.end_of_stream = header_type & 0x04 != 0;
         
@@ -71,7 +70,7 @@ pub const Decoder = struct {
         current_page.segment_count = header[26];
         
         try decoder.reader.readSliceAll(current_page.segments[0..current_page.segment_count]);
-        u.log(.{"Segments: ",current_page.segments[0..current_page.segment_count]});
+        //u.log(.{"Segments: ",current_page.segments[0..current_page.segment_count]});
     }
     
     pub fn try_read_packet(decoder: *Decoder) !?Packet {
@@ -79,7 +78,7 @@ pub const Decoder = struct {
             try decoder.read_page_header();
         }
         if (decoder.need_clear) {
-            u.log(.{"Resetting"});
+            //u.log(.{"Resetting"});
             decoder.current_packet.clear();
         }
         
@@ -93,7 +92,7 @@ pub const Decoder = struct {
             }
             
             const segment_size = decoder.current_page.segments[decoder.current_segment];
-            u.log(.{"Segment ",decoder.current_segment,": ",segment_size});
+            //u.log(.{"Segment ",decoder.current_segment,": ",segment_size});
             decoder.current_segment += 1;
             size += segment_size;
             
@@ -109,7 +108,7 @@ pub const Decoder = struct {
             }
         }
         
-        u.log(.{"Reading ",size," bytes of data"});
+        //u.log(.{"Reading ",size," bytes of data"});
         const data = decoder.current_packet.get_append_slice(size);
         try decoder.reader.readSliceAll(data);
         decoder.need_clear = end_of_packet;
@@ -119,7 +118,7 @@ pub const Decoder = struct {
                 .stream = decoder.current_page.stream_id,
             };
         } else {
-            u.log(.{"The packet is not finished"});
+            //u.log(.{"The packet is not finished"});
             return null;
         }
     }

@@ -77,7 +77,8 @@ pub fn build(b: *std.Build) void {
         .target = b.resolveTargetQuery(.{}),
     });
     mod.addImport("util", b.dependency("util", .{}).module("util"));
-    mod.addImport("vulkan", b.dependency("vulkan", .{.os = target_os_option, .arch = target_arch_option, .release = release_option}).module("vulkan"));
+    const vulkan_dep = b.dependency("vulkan", .{.os = target_os_option, .arch = target_arch_option, .release = release_option});
+    mod.addImport("vulkan", vulkan_dep.module("vulkan"));
     
     const options = b.addOptions();
     options.addOption(bool, "static_linked", link_static);
@@ -91,7 +92,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("update_glfw_source.zig"),
                 .target = b.resolveTargetQuery(.{}),
-                .optimize = .Debug,
+                .optimize = .debug,
             }),
             
         });
@@ -102,7 +103,8 @@ pub fn build(b: *std.Build) void {
         mod.addIncludePath(b.path("glfw/src"));
         mod.addIncludePath(b.path("glfw/include/GLFW"));
         mod.addIncludePath(b.path("generated_headers"));
-        mod.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
+        mod.addIncludePath(vulkan_dep.namedLazyPath("headers"));
+        //mod.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
         if (target_os == .windows) {
             mod.linkSystemLibrary("gdi32", .{});
         }
@@ -135,10 +137,11 @@ pub fn build(b: *std.Build) void {
         const glfw_c = b.addTranslateC(.{
             .root_source_file = dummy_source,
             .target = resolved_target,
-            .optimize = if (release) .ReleaseFast else .Debug,
+            .optimize = if (release) .fast else .debug,
         });
         glfw_c.addIncludePath(b.path("glfw/include/GLFW"));
-        glfw_c.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
+        glfw_c.addIncludePath(vulkan_dep.namedLazyPath("headers"));
+        //glfw_c.addSystemIncludePath(.{.cwd_relative = "/usr/include"});
         const glfw_c_mod = glfw_c.createModule();
         mod.addImport("glfw_c", glfw_c_mod);
     }

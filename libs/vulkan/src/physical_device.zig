@@ -60,7 +60,7 @@ pub const Physical_device = struct {
     
     pub fn get_extensions(pd: *Physical_device, layer: ?[]const u8) ![]Extension_info {
         const layer_nullt = if (layer) |layer_name| (
-            u.alloc.dupeZ(u8, layer_name) catch @panic("No memory")
+            u.alloc.dupeSentinel(u8, layer_name, 0) catch @panic("No memory")
         ) else null;
         defer if (layer_nullt) |layer_name| u.alloc.free(layer_name);
         const layer_ptr = if (layer_nullt) |layer_name| layer_name.ptr else null;

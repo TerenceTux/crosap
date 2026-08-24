@@ -300,7 +300,7 @@ const Codebook = struct {
             cb.vector_entries.append(entry);
             
             const code_length = try read.int_add_one(5);
-            u.log(.{"Entry ",entry," has code length ",code_length});
+            //u.log(.{"Entry ",entry," has code length ",code_length});
             if (min_depth.get(0) == null) {
                 return error.overspecified_tree;
             }
@@ -674,7 +674,7 @@ const Floor_0 = struct {
     
     pub fn decode(floor: *Floor_0, result: []f32, read: *Packet_reader, codebooks: []Codebook) !bool {
         const amplitude = try read.int_bits(u64, floor.amplitude_bits);
-        u.log(.{"Amplitude: ",amplitude});
+        //u.log(.{"Amplitude: ",amplitude});
         if (amplitude == 0) {
             @memset(result, 0);
             return false;
@@ -684,7 +684,7 @@ const Floor_0 = struct {
         if (book_nr >= floor.books.len) {
             return error.invalid_book;
         }
-        u.log(.{"Using codebook ",floor.books[book_nr]," (nr ",book_nr,")"});
+        //u.log(.{"Using codebook ",floor.books[book_nr]," (nr ",book_nr,")"});
         const codebook = &codebooks[floor.books[book_nr]];
         
         var count: usize = 0;
@@ -897,14 +897,16 @@ const Floor_1 = struct {
         u.free_slice(floor.classes);
         u.free_slice(floor.x_list);
         u.free_slice(floor.sort_map);
+        u.free_slice(floor.neighbour_low);
+        u.free_slice(floor.neighbour_high);
         u.free_slice(floor.y_list);
         u.free_slice(floor.final_y);
         u.free_slice(floor.step2_flag);
     }
     
     pub fn decode(floor: *Floor_1, result: []f32, read: *Packet_reader, codebooks: []Codebook) !bool {
-        u.log_start(.{"Decoding floor 1"});
-        defer u.log_end(.{});
+        //u.log_start(.{"Decoding floor 1"});
+        //defer u.log_end(.{});
         if (!try read.boolean()) { // nonzero bit
             @memset(result, 0);
             return false;
@@ -954,8 +956,8 @@ const Floor_1 = struct {
         floor.step2_flag[1] = true;
         floor.final_y[0] = @intCast(floor.y_list[0]);
         floor.final_y[1] = @intCast(floor.y_list[1]);
-        u.log(.{"x0: ",floor.x_list[0]});
-        u.log(.{"x1: ",floor.x_list[1]});
+        //u.log(.{"x0: ",floor.x_list[0]});
+        //u.log(.{"x1: ",floor.x_list[1]});
         for (2..floor.y_list.len) |i| {
             const x = floor.x_list[i];
             //u.log(.{"x",i,": ",x});
@@ -1018,15 +1020,15 @@ const Floor_1 = struct {
             floor.final_y[i] = result_y;
         }
         
-        u.log_start(.{"Draw line"});
-        defer u.log_end(.{});
+        //u.log_start(.{"Draw line"});
+        //defer u.log_end(.{});
         var prev_x: i16 = 0;
         var prev_y = floor.final_y[0] * floor.multiplier;
         for (floor.sort_map[1..]) |i| {
             if (floor.step2_flag[i]) {
                 const new_x: i16 = @intCast(floor.x_list[i]);
                 const new_y = floor.final_y[i] *  floor.multiplier;
-                u.log(.{i,": ",new_x,", ",new_y});
+                //u.log(.{i,": ",new_x,", ",new_y});
                 render_line(prev_x, prev_y, new_x, new_y, result);
                 prev_x = new_x;
                 prev_y = new_y;
@@ -1258,12 +1260,6 @@ const Residu = struct {
     }
     
     pub fn decode(residu: *Residu, read: *Packet_reader, channels: []u8, length: usize, residu_result: []f32, no_residu: []bool, result_stride: usize, codebooks: []Codebook, classifications: []u8) !void {
-        switch (residu.res_type) {
-            .type_0 => u.log_start(.{"Reading residu type 0"}),
-            .type_1 => u.log_start(.{"Reading residu type 1"}),
-            .type_2 => u.log_start(.{"Reading residu type 2"}),
-        }
-        defer u.log_end(.{});
         for (channels) |channel| {
             @memset(residu_result[channel * result_stride ..][0..length], 0);
         }
@@ -1279,7 +1275,7 @@ const Residu = struct {
             vector_count = 1;
             vector_length = length * channels.len;
         }
-        u.log(.{"Reading ",vector_count," vectors of size ",vector_length});
+        //u.log(.{"Reading ",vector_count," vectors of size ",vector_length});
         const residu_begin = @min(residu.begin, vector_length);
         const residu_end = @min(residu.end, vector_length);
         if (residu_end < residu_begin) {
@@ -1287,18 +1283,18 @@ const Residu = struct {
         }
         const classbook = &codebooks[residu.classbook];
         const classwords_per_codeword = classbook.dimensions;
-        u.log(.{"Classwords per codeword: ",classwords_per_codeword});
+        //u.log(.{"Classwords per codeword: ",classwords_per_codeword});
         const n_to_read = residu_end - residu_begin;
         const partitions_to_read = n_to_read / residu.partition_size;
-        u.log(.{"We have to read ",n_to_read," items, so ",partitions_to_read," partitions"});
+        //u.log(.{"We have to read ",n_to_read," items, so ",partitions_to_read," partitions"});
         if (n_to_read == 0) {
-            u.log(.{"Nothing to read"});
+            //u.log(.{"Nothing to read"});
             return;
         }
         
         for (0..residu.max_pass) |pass| {
-            u.log_start(.{"Pass ",pass});
-            defer u.log_end(.{});
+            //u.log_start(.{"Pass ",pass});
+            //defer u.log_end(.{});
             var partition: usize = 0;
             while (partition < partitions_to_read) {
                 if (pass == 0) {
@@ -1924,17 +1920,17 @@ pub const Decoder = struct {
     }
     
     fn decode_audio(d: *Decoder, read: *Packet_reader) ![]f32 {
-        u.log_start(.{"Reading audio packet"});
-        defer u.log_end(.{});
+        //u.log_start(.{"Reading audio packet"});
+        //defer u.log_end(.{});
         
         if (try read.boolean()) {
             return error.expected_audio_packet;
         }
         const mode_number = try read.int_max(usize, d.modes.len - 1);
-        u.log(.{"Mode ",mode_number});
+        //u.log(.{"Mode ",mode_number});
         const mode = d.modes[mode_number];
         const current_blocksize = if (mode.long_block) d.blocksize_1 else d.blocksize_0;
-        u.log(.{"Current blocksize ",current_blocksize});
+        //u.log(.{"Current blocksize ",current_blocksize});
         const spectrum_size = current_blocksize / 2;
         const result_stride = d.blocksize_1 / 2;
         
@@ -1972,7 +1968,7 @@ pub const Decoder = struct {
                 .type_0 => |*floor_0| !try floor_0.decode(channel_floor, read, d.codebooks),
                 .type_1 => |*floor_1| !try floor_1.decode(channel_floor, read, d.codebooks),
             };
-            u.log(.{"No residu: ",no_residu.*});
+            //u.log(.{"No residu: ",no_residu.*});
         }
         
         var channel_index: usize = 0;

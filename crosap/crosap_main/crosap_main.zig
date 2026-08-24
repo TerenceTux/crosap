@@ -34,10 +34,10 @@ pub const Crosap_main = struct {
         
         u.log("Welcome to crosap.");
         switch (builtin.mode) {
-            .Debug => u.log("Running in DEBUG mode. Performance will be bad!"),
-            .ReleaseSafe => std.debug.print("WARNING: running in ReleaseSafe mode, which can have lower performance, because a lot of runtime checks are enabled. Consider using ReleaseFast.", .{}),
-            .ReleaseFast => {},
-            .ReleaseSmall => std.debug.print("WARNING: running in ReleaseSmall mode, which can have lower performance, because not all performance optimizations are applied. Consider using ReleaseFast.", .{}),
+            .debug => u.log("Running in DEBUG mode. Performance will be bad!"),
+            .safe => std.debug.print("WARNING: running in ReleaseSafe mode, which can have lower performance, because a lot of runtime checks are enabled. Consider using ReleaseFast.", .{}),
+            .fast => {},
+            .small => std.debug.print("WARNING: running in ReleaseSmall mode, which can have lower performance, because not all performance optimizations are applied. Consider using ReleaseFast.", .{}),
         }
         u.log("This mode is intended for developing or debugging. When you just want to run the application, use the -Drelease build flag.");
         
@@ -459,10 +459,10 @@ pub fn create_activity_from_bits(reader: u.serialize.bit_reader.Dynamic_interfac
     var importer = u.serialize.create_importer(reader);
     const name = importer.read([]const u8);
     defer u.free_slice(name);
-    const app_activity_fields = @typeInfo(app_activities).@"struct".decls;
-    inline for (app_activity_fields) |field| {
-        if (u.bytes_equal(field.name, name)) {
-            const Activity = @field(app_activities, field.name);
+    const app_activity_fields = @typeInfo(app_activities).@"struct".decl_names;
+    inline for (app_activity_fields) |field_name| {
+        if (u.bytes_equal(field_name, name)) {
+            const Activity = @field(app_activities, field_name);
             const new_activity = u.alloc_single(Activity);
             new_activity.init_from_data(reader);
             return activity.dynamic(new_activity);

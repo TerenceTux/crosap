@@ -31,28 +31,25 @@ const targets = std.StaticStringMap(std.Target.Query).initComptime(.{
 });
 
 pub fn app(b: *std.Build, app_main: []const u8) void {
-    var threaded: std.Io.Threaded = .init(b.allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    const io = b.graph.io;
     
     const crosap_dep = b.dependencyFromBuildZig(@This(), .{
         .as_dependency = true,
     });
     
     const options_file = b.option([]const u8, "options_file", "The path to a file that contains build options, one option per line");
-    const options_direct = b.option([]const u8, "options_direct", "Extra options that have precedence over options_file, seperated by semicolons");
-    //const backend_option = b.option([]const u8, "backend", "The backend to compile for (required, but omitting shows available backends)");
+    const options_direct = b.option([]const u8, "options_direct", "Extra options that have precedence over options_file, seperated by '&'");
     const target_option = b.option([]const u8, "target", "The target to compile for. Default is native, use 'list' to show available options.");
     const output_option = b.option([]const u8, "output", "The name for the compiled binary. Default is a the app name with the backend and compile target.");
     const release_option = b.option(bool, "release", "True to build a fast release executable, false to build a slower debug version");
     
-    b.build_root.handle.access(io, app_main, .{}) catch {
+    b.root.access(io, app_main, .{}) catch {
         std.debug.print("The file {s} does not exist\n", .{app_main});
         return;
     };
     
     const optimize_bool = release_option orelse false;
-    const optimize_mode: std.builtin.OptimizeMode = if (optimize_bool) .ReleaseFast else .Debug;
+    const optimize_mode: std.lang.OptimizeMode = if (optimize_bool) .fast else .debug;
     
     const target_name = target_option orelse "native";
     var build_target: std.Build.ResolvedTarget = undefined;
@@ -145,7 +142,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
         .name = "generate_imports",
         .root_module = b.createModule(.{
             .target = b.resolveTargetQuery(.{}),
-            .optimize = .Debug,
+            .optimize = .debug,
             .root_source_file = crosap_dep.path("crosap/imports_gen.zig"),
         }),
     });
@@ -166,7 +163,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
     crosap_api.addImport("util", util);
     
     var backends = std.StringHashMapUnmanaged(*std.Build.Module).empty;
-    var backends_dir = crosap_dep.builder.build_root.handle.openDir(io, "backends", .{}) catch @panic("backends directory not found");
+    var backends_dir = crosap_dep.builder.root.openDir(io, "backends", .{}) catch @panic("backends directory not found");
     defer backends_dir.close(io);
     for (backend_items) |backend_name| {
         var backend_dir = backends_dir.openDir(io, backend_name, .{}) catch {
@@ -248,7 +245,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
             .root_source_file = crosap_dep.path("crosap_main/lib_main.zig"),
             .target = build_target,
             .optimize = optimize_mode,
-            .strip = optimize_mode != .Debug,
+            .strip = optimize_mode != .debug,
             .link_libc = true,
         });
         main.addImport("util", util);
@@ -273,7 +270,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
             .root_source_file = crosap_dep.path("crosap_main/exe_main.zig"),
             .target = build_target,
             .optimize = optimize_mode,
-            .strip = optimize_mode != .Debug,
+            .strip = optimize_mode != .debug,
             .link_libc = true,
         });
         main.addImport("util", util);
@@ -288,16 +285,15 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
             //.use_llvm = true,
         };
         const exe = b.addExecutable(exe_options);
-        if (build_target.result.os.tag == .windows and optimize_mode != .Debug) {
-            exe.subsystem = .Windows;
+        if (build_target.result.os.tag == .windows and optimize_mode != .debug) {
+            exe.subsystem = .windows;
         }
         
         b.installArtifact(exe);
         
         const exe_run = b.addRunArtifact(exe);
-        if (b.args) |args| {
-            exe_run.addArgs(args);
-        }
+        exe_run.addPassthruArgs();
+        
         const run_step = b.step("run", "Run executable");
         run_step.dependOn(&exe_run.step);
         
@@ -308,7 +304,7 @@ pub fn app(b: *std.Build, app_main: []const u8) void {
 }
 
 fn show_available_backends(crosap_dep: *std.Build.Dependency, io: std.Io) void {
-    var backends_dir = crosap_dep.builder.build_root.handle.openDir(io, "backends", .{.iterate = true}) catch @panic("backends directory not found");
+    var backends_dir = crosap_dep.builder.root.openDir(io, "backends", .{.iterate = true}) catch @panic("backends directory not found");
     var iterator = backends_dir.iterate();
     std.debug.print("Available backends:\n", .{});
     while (iterator.next(io) catch @panic("backends iterate error")) |entry| {
@@ -335,7 +331,7 @@ fn name_part_of_path(path: []const u8) []const u8 {
 }
 
 fn create_backend_lib_module(b: *std.Build, io: std.Io, crosap_dep: *std.Build.Dependency, lib_path: []const u8, util: *std.Build.Module, link_static: *std.StringHashMapUnmanaged(void), target_os: std.Target.Os.Tag, target_arch: std.Target.Cpu.Arch, release: ?bool) ?*std.Build.Module {
-    var dir = crosap_dep.builder.build_root.handle.openDir(io, lib_path, .{}) catch @panic("backend library not found");
+    var dir = crosap_dep.builder.root.openDir(io, lib_path, .{}) catch @panic("backend library not found");
     defer dir.close(io);
     
     const lib_name = std.fs.path.basename(lib_path);

@@ -103,10 +103,10 @@ const characters = struct {
 };
 
 const character_names = b: {
-    const decls = @typeInfo(characters).@"struct".decls;
+    const decls = @typeInfo(characters).@"struct".decl_names;
     var names: [decls.len][:0]const u8 = undefined;
-    for (&names, decls) |*name, decl| {
-        name.* = decl.name;
+    for (&names, decls) |*name, decl_name| {
+        name.* = decl_name;
     }
     break:b names;
 };

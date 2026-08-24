@@ -29,8 +29,8 @@ pub const Command_item = struct {
 };
 
 fn index_in_struct(Struct: type, comptime name: []const u8) ?usize {
-    for (@typeInfo(Struct).@"struct".fields, 0..) |field_info, i| {
-        if (std.mem.eql(u8, field_info.name, name)) {
+    for (@typeInfo(Struct).@"struct".field_names, 0..) |field_name, i| {
+        if (std.mem.eql(u8, field_name, name)) {
             return i;
         }
     }
@@ -42,9 +42,8 @@ pub fn create_extension_command_map(Extension_enum: type, Commands_struct: type)
     const Value_struct = std.enums.EnumFieldStruct(Extension_enum, Map_value, null);
     var array_values: Value_struct = undefined;
     
-    @setEvalBranchQuota(@typeInfo(Value_struct).@"struct".fields.len * 100000);
-    for (@typeInfo(Value_struct).@"struct".fields) |field_info| {
-        const extension_name = field_info.name;
+    @setEvalBranchQuota(@typeInfo(Value_struct).@"struct".field_names.len * 100000);
+    for (@typeInfo(Value_struct).@"struct".field_names) |extension_name| {
         const extension_commands = @field(types.extension_commands, extension_name).commands;
         
         var command_count: usize = 0;
@@ -74,10 +73,10 @@ pub fn create_extension_command_map(Extension_enum: type, Commands_struct: type)
 }
 
 pub const core_versions = b: {
-    const versions_fields = @typeInfo(types.Core_version).@"enum".fields;
+    const versions_fields = @typeInfo(types.Core_version).@"enum".field_names;
     var values: [versions_fields.len]types.Core_version = undefined;
-    for (&values, versions_fields) |*value, field| {
-        value.* = @field(types.Core_version, field.name);
+    for (&values, versions_fields) |*value, field_name| {
+        value.* = @field(types.Core_version, field_name);
     }
     break:b values;
 };
@@ -88,7 +87,7 @@ pub fn create_extension_maps(Extension: type) struct {
     std.EnumArray(Extension, [:0]const u8),
     std.StaticStringMap(Extension),
 } {
-    const extension_fields = @typeInfo(Extension).@"enum".fields;
+    const extension_fields = @typeInfo(Extension).@"enum".field_names;
     @setEvalBranchQuota(extension_fields.len * 1000);
     
     const Map_values = std.enums.EnumFieldStruct(Extension, [:0]const u8, null);
@@ -100,8 +99,7 @@ pub fn create_extension_maps(Extension: type) struct {
     };
     var reverse_values: [extension_fields.len]Reverse_entry = undefined;
     
-    for (&reverse_values, extension_fields) |*reverse_value, enum_field| {
-        const name = enum_field.name;
+    for (&reverse_values, extension_fields) |*reverse_value, name| {
         const vk_name = @field(types.extension_commands, name).name;
         @field(map_values, name) = vk_name;
         reverse_value.* = .{
@@ -150,14 +148,14 @@ pub const Loader = struct {
     fn init_functions(loader: *Loader) !void {
         u.log_start(.{"Loading base functions"});
         defer u.log_end(.{});
-        inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".fields) |field| {
-            const vk_name = @field(types, field.name).name;
+        inline for (@typeInfo(@TypeOf(loader.fns)).@"struct".field_names) |field_name| {
+            const vk_name = @field(types, field_name).name;
             const fn_ptr = loader.get_instance_proc_addr(null, vk_name);
             if (fn_ptr == null) {
-                u.log(.{"Error getting function ",field.name});
+                u.log(.{"Error getting function ",field_name});
                 return error.function_not_found;
             }
-            @field(loader.fns, field.name) = @ptrCast(fn_ptr.?);
+            @field(loader.fns, field_name) = @ptrCast(fn_ptr.?);
         }
     }
     
@@ -259,7 +257,7 @@ pub const Loader = struct {
     
     pub fn get_extensions(loader: *Loader, layer: ?[]const u8) ![]Extension_info {
         const layer_nullt = if (layer) |layer_name| (
-            u.alloc.dupeZ(u8, layer_name) catch @panic("No memory")
+            u.alloc.dupeSentinel(u8, layer_name, 0) catch @panic("No memory")
         ) else null;
         defer if (layer_nullt) |layer_name| u.alloc.free(layer_name);
         const layer_ptr = if (layer_nullt) |layer_name| layer_name.ptr else null;
@@ -338,8 +336,8 @@ pub const Loader = struct {
         };
         
         pub fn create_vulkan(setting: *const Layer_setting, free_info: *Free_info) types.Ext_layer_setting {
-            free_info.layer = u.alloc.dupeZ(u8, setting.layer) catch @panic("no memory");
-            free_info.setting = u.alloc.dupeZ(u8, setting.setting) catch @panic("no memory");
+            free_info.layer = u.alloc.dupeSentinel(u8, setting.layer, 0) catch @panic("no memory");
+            free_info.setting = u.alloc.dupeSentinel(u8, setting.setting, 0) catch @panic("no memory");
             free_info.strings = &.{};
             free_info.booleans = &.{};
             var value_type: types.Ext_layer_setting_type = undefined;
@@ -347,31 +345,31 @@ pub const Loader = struct {
             var pointer: *const anyopaque = undefined;
             switch (setting.value) {
                 .int => |*value| {
-                    value_type = .int_64;
+                    value_type = .int64;
                     pointer = value;
                 },
                 .multiple_ints => |values| {
-                    value_type = .int_64;
+                    value_type = .int64;
                     count = values.len;
                     pointer = values.ptr;
                 },
                 .float => |*value| {
-                    value_type = .float_64;
+                    value_type = .float64;
                     pointer = value;
                 },
                 .multiple_floats => |values| {
-                    value_type = .float_64;
+                    value_type = .float64;
                     count = values.len;
                     pointer = values.ptr;
                 },
                 .boolean => |value| {
-                    value_type = .bool_32;
+                    value_type = .bool32;
                     free_info.booleans = u.alloc.alloc(types.Bool, 1) catch @panic("no memory");
                     free_info.booleans[0] = .from(value);
                     pointer = @ptrCast(free_info.booleans.ptr);
                 },
                 .multiple_booleans => |values| {
-                    value_type = .bool_32;
+                    value_type = .bool32;
                     free_info.booleans = u.alloc.alloc(types.Bool, values.len) catch @panic("no memory");
                     for (free_info.booleans, values) |*store, value| {
                         store.* = .from(value);
@@ -382,14 +380,14 @@ pub const Loader = struct {
                 .string => |value| {
                     value_type = .string;
                     free_info.strings = u.alloc.alloc([:0]const u8, 1) catch @panic("no memory");
-                    free_info.strings[0] = u.alloc.dupeZ(u8, value) catch @panic("no memory");
+                    free_info.strings[0] = u.alloc.dupeSentinel(u8, value, 0) catch @panic("no memory");
                     pointer = @ptrCast(free_info.strings.ptr);
                 },
                 .multiple_strings => |values| {
                     value_type = .string;
                     free_info.strings = u.alloc.alloc([:0]const u8, values.len) catch @panic("no memory");
                     for (free_info.strings, values) |*store, value| {
-                        store.* = u.alloc.dupeZ(u8, value) catch @panic("no memory");
+                        store.* = u.alloc.dupeSentinel(u8, value, 0) catch @panic("no memory");
                     }
                     count = values.len;
                     pointer = @ptrCast(free_info.strings.ptr);
@@ -408,13 +406,13 @@ pub const Loader = struct {
     
     pub fn create_instance(loader: *Loader, application: ?Name_and_version, engine: ?Name_and_version, layers: []const []const u8, extensions: []const types.Instance_extension, layer_settings: []const Layer_setting) !Instance {
         const application_name = if (application) |application_v| (
-            u.alloc.dupeZ(u8, application_v.name) catch @panic("No memory")
+            u.alloc.dupeSentinel(u8, application_v.name, 0) catch @panic("No memory")
         ) else null;
         defer if (application_name) |name| u.alloc.free(name);
         const application_version = if (application) |application_v| application_v.version else 0;
         
         const engine_name = if (engine) |engine_v| (
-            u.alloc.dupeZ(u8, engine_v.name) catch @panic("No memory")
+            u.alloc.dupeSentinel(u8, engine_v.name, 0) catch @panic("No memory")
         ) else null;
         defer if (engine_name) |name| u.alloc.free(name);
         const engine_version = if (engine) |engine_v| engine_v.version else 0;
@@ -424,7 +422,7 @@ pub const Loader = struct {
         const layers_z = u.alloc.alloc([*:0]const u8, layers.len) catch @panic("No memory");
         defer u.alloc.free(layers_z);
         for (layers, layers_s, layers_z) |layer, *slice, *ptr| {
-            slice.* = u.alloc.dupeZ(u8, layer) catch @panic("No memory");
+            slice.* = u.alloc.dupeSentinel(u8, layer, 0) catch @panic("No memory");
             ptr.* = slice.*.ptr;
         }
         defer for (layers_s) |slice| {

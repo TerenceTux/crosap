@@ -25,10 +25,9 @@ pub fn add_module_with_test(b: *std.Build, name: []const u8, path: []const u8) v
 
 pub fn add_modules_with_test(b: *std.Build, modules: anytype) void {
     const test_step = b.step("test", "Run all tests");
-    const fields = @typeInfo(@TypeOf(modules)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(modules)).@"struct".field_names;
     
-    inline for (fields) |field| {
-        const mod_name = field.name;
+    inline for (fields) |mod_name| {
         const main_file = @field(modules, mod_name);
         
         const mod = b.addModule(mod_name, .{

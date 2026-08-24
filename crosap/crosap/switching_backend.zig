@@ -5,10 +5,10 @@ const Event = crosap_api.Event;
 const backend_imports = @import("backend_modules").imports;
 
 const backend_modules = b: {
-    const import_decls = @typeInfo(backend_imports).@"struct".decls;
+    const import_decls = @typeInfo(backend_imports).@"struct".decl_names;
     var list: [import_decls.len][:0]const u8 = undefined;
-    for (&list, import_decls) |*item, decl| {
-        item.* = decl.name;
+    for (&list, import_decls) |*item, decl_name| {
+        item.* = decl_name;
     }
     break:b list;
 };
@@ -19,9 +19,9 @@ const Backend_option = b: {
         const field_type = switch(@typeInfo(@TypeOf(Backend_var))) {
             .@"struct" => void,
             .@"fn" => |fn_info| t: {
-                const arguments = fn_info.params;
+                const arguments = fn_info.param_types;
                 u.assert(arguments.len == 1);
-                break:t arguments[0].type.?;
+                break:t arguments[0].?;
             },
             else => unreachable,
         };
@@ -111,7 +111,7 @@ pub const Backend = struct {
     const Variants = variants: {
         var names: [allowed_variants.len][]const u8 = undefined;
         var types: [allowed_variants.len]type = undefined;
-        const attrs: [allowed_variants.len]std.builtin.Type.UnionField.Attributes = @splat(.{});
+        const attrs: [allowed_variants.len]std.lang.Type.Union.FieldAttributes = @splat(.{});
         for (&names, &types, allowed_variants) |*name, *field_type, variant| {
             name.* = u.comptime_to_string(variant.name);
             field_type.* = variant.imp;
@@ -155,8 +155,8 @@ pub const Backend = struct {
     fn Return_of_function(function: @TypeOf(.enum_literal)) type {
         var Return_type: ?type = null;
         
-        inline for (@typeInfo(Variants).@"union".fields) |field| {
-            const Fn = @TypeOf(@field(field.type, u.comptime_to_string(function)));
+        inline for (@typeInfo(Variants).@"union".field_types) |field_type| {
+            const Fn = @TypeOf(@field(field_type, u.comptime_to_string(function)));
             const Type = @typeInfo(Fn).@"fn".return_type.?;
             if (Return_type == null) {
                 Return_type = Type;
@@ -170,14 +170,14 @@ pub const Backend = struct {
     fn Arguments_of_function(function: @TypeOf(.enum_literal)) type {
         var Arguments: ?type = null;
         
-        inline for (@typeInfo(Variants).@"union".fields) |field| {
-            const Fn = @TypeOf(@field(field.type, u.comptime_to_string(function)));
-            const params = @typeInfo(Fn).@"fn".params;
+        inline for (@typeInfo(Variants).@"union".field_types) |field_type| {
+            const Fn = @TypeOf(@field(field_type, u.comptime_to_string(function)));
+            const params = @typeInfo(Fn).@"fn".param_types;
             var types_list: [params.len - 1]type = undefined;
             for (&types_list, params[1..]) |*item, param| {
-                item.* = param.type.?;
+                item.* = param.?;
             }
-            const Type = std.meta.Tuple(&types_list);
+            const Type = @Tuple(&types_list);
             if (Arguments == null) {
                 Arguments = Type;
             } else if (Arguments != Type) {
@@ -193,12 +193,12 @@ pub const Backend = struct {
                 const current_variant = &@field(b.variants, @tagName(variant_type));
                 
                 const Call_arguments = comptime call_arguments: {
-                    const params = @typeInfo(@TypeOf(args)).@"struct".fields;
+                    const params = @typeInfo(@TypeOf(args)).@"struct".field_types;
                     var arguments_list: [params.len]type = undefined;
                     for (&arguments_list, params) |*argument, param| {
-                        argument.* = param.type;
+                        argument.* = param;
                     }
-                    break:call_arguments std.meta.Tuple(&([1]type {@TypeOf(current_variant)} ++ arguments_list));
+                    break:call_arguments @Tuple(&([1]type {@TypeOf(current_variant)} ++ arguments_list));
                 };
                 var call_arguments: Call_arguments = undefined;
                 call_arguments[0] = current_variant;
